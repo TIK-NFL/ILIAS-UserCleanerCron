@@ -1,0 +1,85 @@
+// subtab names
+subtab_name_general#:#Interfaces
+subtab_name_execution_rules#:#Rule assignments
+subtab_name_exclusions#:#Never delete
+subtab_name_rules#:#Rules
+
+// exclusion table
+exclusion_table_title#:#Never delete
+exclusion_table_column_user_id#:#User ID
+exclusion_table_column_login#:#Login
+exclusion_table_column_name#:#Name
+exclusion_table_column_email#:#E-mail
+
+// rules table
+rules_table_title#:#Rules
+rules_table_column_rule_id#:#Rule ID
+rules_table_column_parameter#:#Parameter
+rules_table_column_symbol#:#Symbol
+rules_table_column_value#:#Value
+rules_table_input_parameter#:#Parameter
+rules_table_input_symbol#:#Symbol
+rules_table_input_value#:#Value
+rules_form_title#:#Add rule
+rules_form_no_parameters#:#No parameters are available yet.
+// parameters
+parameter_last_login_months#:#Last login (in months)
+parameter_external_account_missing#:#Account no longer exists
+// auth modes
+auth_mode_default#:#Local ILIAS authentication
+auth_mode_ldap#:#LDAP
+auth_mode_cas#:#CAS
+auth_mode_shibboleth#:#Shibboleth
+auth_mode_saml#:#SAML
+auth_mode_oidc#:#OpenID Connect
+auth_mode_script#:#External authentication script
+auth_mode_local#:#System accounts
+// execution rules table
+execution_rules_table_title#:#Rule assignments
+execution_rules_table_column_execution_id#:#Assignment ID
+execution_rules_table_column_rule#:#Rule
+execution_rules_table_column_auth_mode#:#Authentication
+execution_rules_table_column_role#:#Global role
+execution_rules_table_input_rule#:#Rule
+execution_rules_table_input_auth_mode#:#Authentication
+execution_rules_table_input_role#:#Global role
+execution_rules_form_title#:#Assign rule
+execution_rules_form_no_rules#:#No rules are available yet.
+execution_rules_form_no_auth_modes#:#No authentication modes are available yet.
+execution_rules_form_no_roles#:#No global roles are available.
+// auth configuration
+auth_form_title#:#External check sources
+auth_rest_section_title#:#REST check
+auth_rest_url_template#:#Status URL
+auth_rest_url_template_info#:#URL for the external account check. {login} can be used as placeholder for the ILIAS login.
+auth_rest_auth_header#:#HTTP Authorization header
+auth_rest_auth_header_info#:#Optional Authorization header, e.g. Bearer TOKEN.
+auth_rest_active_json_path#:#JSON path for active state
+auth_rest_active_json_path_info#:#Optional dot path in JSON, e.g. active or account.enabled.
+auth_rest_active_value#:#Active value
+auth_rest_active_value_info#:#Value that means active, e.g. true, 1 or active.
+auth_ldap_section_title#:#LDAP check
+auth_ldap_status_attribute#:#LDAP status attribute
+auth_ldap_status_attribute_info#:#Optional LDAP attribute containing the account status.
+auth_ldap_active_value#:#LDAP active value
+auth_ldap_active_value_info#:#Value of the status attribute that means active.
+auth_rest_connection_test_login#:#Test login
+auth_rest_connection_test_login_info#:#Optional login for the REST connection test. Replaces {login} in the status URL.
+auth_ldap_host#:#LDAP host
+auth_ldap_host_info#:#Host name or IP address of the LDAP server used for the connection test.
+auth_ldap_port#:#LDAP port
+auth_ldap_port_info#:#Port of the LDAP server. Default is 389.
+auth_ldap_bind_dn#:#LDAP bind DN
+auth_ldap_bind_dn_info#:#Optional technical user for the connection test. Leave empty for anonymous bind.
+auth_ldap_bind_password#:#LDAP bind password
+auth_ldap_bind_password_info#:#Optional password for the technical bind user.
+auth_connection_test_rest_skipped#:#REST test skipped: no status URL configured.
+auth_connection_test_rest_missing_login#:#REST test failed: the status URL contains {login}, but no test login is configured.
+auth_connection_test_rest_curl_missing#:#REST test failed: the PHP cURL extension is not available.
+auth_connection_test_rest_failed#:#REST test failed: the connection could not be initialized.
+auth_connection_test_rest_failed_with_status#:#REST test failed: response status/error %s.
+auth_connection_test_rest_success#:#REST test successful: HTTP status %s.
+auth_connection_test_ldap_skipped#:#LDAP test skipped: no LDAP host configured.
+auth_connection_test_ldap_extension_missing#:#LDAP test failed: the PHP LDAP extension is not available.
+auth_connection_test_ldap_failed#:#LDAP test failed: connection or bind was not successful.
+auth_connection_test_ldap_success#:#LDAP test successful: connection and bind were successful.
