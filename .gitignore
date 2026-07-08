@@ -1,0 +1,59 @@
+# IDEs and Development
+/.env
+/.floo
+/.flooignore
+/.project
+/.idea
+/.cache
+/.buildpath
+/.settings
+/errors
+/extern
+/components/ILIAS/PHPUnit/config/cfg.phpunit.php
+/nbproject
+/templates/default/delos.css.map
+
+# General Patterns
+*.bak
+.DS_Store
+*~
+.svn
+*.swp
+*.swo
+
+# Core Components and Components From Other Vendors
+/components/*
+!/components/ILIAS
+!/components/USTUTT
+
+# Generated Files
+/artifacts/*
+/ilias.ini.php
+/ilias.log
+/db_template_writer.php
+/components/ILIAS/setup_/sql/dbupdate_custom.php
+/install_client.php
+
+# Directories
+/public
+/Customizing/global
+/Customizing/clients
+virtual-data
+/vendor/composer/vendor
+
+# Node Modules
+/node_modules
+/components/ILIAS/Chatroom/chat/node_modules
+
+# cli
+captainhook.config.json
+captainhook.local.json
+scripts/PHPUnit/.phpunit.cache/
+.php-cs-fixer.cache
+phpstan.local.neon
+phpstan-baseline.neon
+
+# File Delivery
+override.php
+components/ILIAS/FileHandlingDemo
+public/data/
