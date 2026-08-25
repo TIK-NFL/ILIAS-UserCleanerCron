@@ -30,27 +30,16 @@ use ILIAS\UI\URLBuilder;
  */
 
 /**
- * @author Ulf Bischoff <ulf.bischoff@tik.uni-stuttgart.de>
  * @ilCtrl_isCalledBy ilUserCleanerExclusionsTableGUI: ilUserCleanerConfigGUI
  * @ilCtrl_Calls ilUserCleanerExclusionsTableGUI:
  */
 class ilUserCleanerExclusionsTableGUI
 {
-    private const COMPONENT_PARAMETERS = ['ctype', 'cname', 'slot_id', 'plugin_id', 'pname'];
-    private const CMD_SHOW = 'show';
-    private const CMD_ADD = 'addExclusion';
-    private const CMD_AUTOCOMPLETE = 'doUserAutoComplete';
-    private const CMD_HANDLE_TABLE_ACTIONS = 'handleTableActions';
-    private const TABLE_ACTION_DELETE = 'delete';
-    private const TABLE_ACTION_PARAMETER = 'exclusion_table_action';
-    private const TABLE_ROW_IDS_PARAMETER = 'exclusion_table_exclusion_ids';
-    private const FORM_FIELD_USERS = 'user_logins';
-
     private ilCtrlInterface $ctrl;
     private ilGlobalTemplateInterface $tpl;
     private ilToolbarGUI $toolbar;
     private ilLanguage $lng;
-    private ilUserDBConnector $dbConnector;
+    private ilUserCleanerExclusionRepository $exclusions;
     private UIFactory $uiFactory;
     private UIRenderer $uiRenderer;
     private HTTPServices $http;
@@ -65,7 +54,7 @@ class ilUserCleanerExclusionsTableGUI
         $this->tpl = $DIC->ui()->mainTemplate();
         $this->toolbar = $DIC->toolbar();
         $this->lng = $DIC->language();
-        $this->dbConnector = new ilUserDBConnector();
+        $this->exclusions = new ilUserCleanerExclusionRepository();
         $this->uiFactory = $DIC->ui()->factory();
         $this->uiRenderer = $DIC->ui()->renderer();
         $this->http = $DIC->http();
@@ -81,19 +70,19 @@ class ilUserCleanerExclusionsTableGUI
     {
         $this->preserveComponentParameters();
 
-        $cmd = $this->ctrl->getCmd(self::CMD_SHOW);
+        $cmd = $this->ctrl->getCmd(ilUserCleanerGUIConstants::CMD_SHOW);
 
         switch ($cmd) {
-            case self::CMD_AUTOCOMPLETE:
+            case ilUserCleanerGUIConstants::CMD_USER_AUTOCOMPLETE:
                 $this->doUserAutoComplete();
                 return;
-            case self::CMD_ADD:
+            case ilUserCleanerGUIConstants::CMD_ADD_EXCLUSION:
                 $this->addExclusion();
                 return;
-            case self::CMD_HANDLE_TABLE_ACTIONS:
+            case ilUserCleanerGUIConstants::CMD_HANDLE_TABLE_ACTIONS:
                 $this->handleTableActions();
                 return;
-            case self::CMD_SHOW:
+            case ilUserCleanerGUIConstants::CMD_SHOW:
             default:
                 $this->show();
         }
@@ -102,29 +91,11 @@ class ilUserCleanerExclusionsTableGUI
 
     private function preserveComponentParameters(): void
     {
-        foreach ([
+        ilUserCleanerGUIHelper::preserveComponentParameters([
             ilUserCleanerConfigGUI::class,
             self::class,
             ilObjComponentSettingsGUI::class,
-        ] as $class) {
-            foreach (self::COMPONENT_PARAMETERS as $parameter) {
-                $this->preserveComponentParameter($class, $parameter);
-            }
-        }
-    }
-
-    private function preserveComponentParameter(string $class, string $parameter): void
-    {
-        $query = $this->http->request()->getQueryParams();
-        if (!isset($query[$parameter]) || !is_string($query[$parameter])) {
-            return;
-        }
-
-        $this->ctrl->setParameterByClass(
-            $class,
-            $parameter,
-            ilUtil::stripSlashes($query[$parameter])
-        );
+        ]);
     }
 
     public function show(): void
@@ -132,7 +103,7 @@ class ilUserCleanerExclusionsTableGUI
         $this->buildToolbar();
 
         $table = new ilUserCleanerExclusionsKitchenSinkTable(
-            $this->dbConnector,
+            $this->exclusions,
             $this->ctrl,
             $this->lng,
             $this->uiFactory,
@@ -144,7 +115,7 @@ class ilUserCleanerExclusionsTableGUI
                 'name' => $this->pluginObject->txt('exclusion_table_column_name'),
                 'email' => $this->pluginObject->txt('exclusion_table_column_email'),
             ],
-            self::CMD_HANDLE_TABLE_ACTIONS
+            ilUserCleanerGUIConstants::CMD_HANDLE_TABLE_ACTIONS
         );
 
         $this->tpl->setContent($this->uiRenderer->render($table->getComponent()));
@@ -154,47 +125,58 @@ class ilUserCleanerExclusionsTableGUI
     {
         $this->toolbar->setFormAction($this->ctrl->getFormActionByClass(
             [ilObjComponentSettingsGUI::class, ilUserCleanerConfigGUI::class, self::class],
-            self::CMD_ADD
+            ilUserCleanerGUIConstants::CMD_ADD_EXCLUSION
         ));
 
-        $user_input = new ilTextInputGUI($this->lng->txt('user'), self::FORM_FIELD_USERS);
+        $user_input = new ilTextInputGUI(
+            $this->lng->txt('user'),
+            ilUserCleanerGUIConstants::FIELD_USER_LOGINS
+        );
         $user_input->setMulti(true, true);
         $user_input->setDataSource($this->ctrl->getLinkTargetByClass(
             [ilObjComponentSettingsGUI::class, ilUserCleanerConfigGUI::class, self::class],
-            self::CMD_AUTOCOMPLETE,
+            ilUserCleanerGUIConstants::CMD_USER_AUTOCOMPLETE,
             '',
             true
         ));
         $this->toolbar->addInputItem($user_input, true);
 
-        $this->toolbar->addFormButton($this->lng->txt('add'), self::CMD_ADD, null, true);
+        $this->toolbar->addFormButton(
+            $this->lng->txt('add'),
+            ilUserCleanerGUIConstants::CMD_ADD_EXCLUSION,
+            null,
+            true
+        );
     }
 
     private function addExclusion(): void
     {
         foreach ($this->getSubmittedLogins() as $login) {
             $user_id = ilObjUser::_lookupId($login);
-            if ($user_id === null || $this->dbConnector->isUserExcluded((int) $user_id)) {
+            if ($user_id === null || $this->exclusions->containsUser((int) $user_id)) {
                 continue;
             }
 
-            $this->dbConnector->insertExclusion((int) $user_id);
+            $this->exclusions->addUser((int) $user_id);
         }
 
-        $this->ctrl->redirect($this, self::CMD_SHOW);
+        $this->ctrl->redirect($this, ilUserCleanerGUIConstants::CMD_SHOW);
     }
 
     private function handleTableActions(): void
     {
         $query = $this->http->wrapper()->query();
-        if (!$query->has(self::TABLE_ACTION_PARAMETER)) {
-            $this->ctrl->redirect($this, self::CMD_SHOW);
+        if (!$query->has(ilUserCleanerGUIConstants::PARAM_EXCLUSION_TABLE_ACTION)) {
+            $this->ctrl->redirect($this, ilUserCleanerGUIConstants::CMD_SHOW);
             return;
         }
 
-        $action = $query->retrieve(self::TABLE_ACTION_PARAMETER, $this->refinery->to()->string());
+        $action = $query->retrieve(
+            ilUserCleanerGUIConstants::PARAM_EXCLUSION_TABLE_ACTION,
+            $this->refinery->to()->string()
+        );
         $ids = $query->retrieve(
-            self::TABLE_ROW_IDS_PARAMETER,
+            ilUserCleanerGUIConstants::PARAM_EXCLUSION_IDS,
             $this->refinery->custom()->transformation(static function ($row_ids): array {
                 if (is_array($row_ids)) {
                     return $row_ids;
@@ -204,13 +186,13 @@ class ilUserCleanerExclusionsTableGUI
             })
         );
 
-        if ($action === self::TABLE_ACTION_DELETE) {
+        if ($action === ilUserCleanerGUIConstants::TABLE_ACTION_DELETE) {
             foreach ($ids as $id) {
-                $this->dbConnector->deleteExclusion((int) $id);
+                $this->exclusions->delete((int) $id);
             }
         }
 
-        $this->ctrl->redirect($this, self::CMD_SHOW);
+        $this->ctrl->redirect($this, ilUserCleanerGUIConstants::CMD_SHOW);
     }
 
     private function doUserAutoComplete(): void
@@ -228,7 +210,7 @@ class ilUserCleanerExclusionsTableGUI
 
     private function getSubmittedLogins(): array
     {
-        $submitted = $_POST[self::FORM_FIELD_USERS] ?? [];
+        $submitted = $_POST[ilUserCleanerGUIConstants::FIELD_USER_LOGINS] ?? [];
         if (is_string($submitted)) {
             $submitted = preg_split('/[,;\r\n]+/', $submitted) ?: [];
         }
@@ -242,12 +224,10 @@ class ilUserCleanerExclusionsTableGUI
 
 class ilUserCleanerExclusionsKitchenSinkTable implements DataRetrieval
 {
-    private const ACTION_DELETE = 'delete';
-
     /** @var list<array<string, scalar>>|null */
     private ?array $records = null;
     public function __construct(
-        private ilUserDBConnector $dbConnector,
+        private ilUserCleanerExclusionRepository $exclusions,
         private ilCtrlInterface $ctrl,
         private ilLanguage $lng,
         private UIFactory $uiFactory,
@@ -299,9 +279,9 @@ class ilUserCleanerExclusionsKitchenSinkTable implements DataRetrieval
         );
 
         return [
-            self::ACTION_DELETE => $this->uiFactory->table()->action()->multi(
+            ilUserCleanerGUIConstants::TABLE_ACTION_DELETE => $this->uiFactory->table()->action()->multi(
                 $this->lng->txt('delete'),
-                $url_builder->withParameter($action_token, self::ACTION_DELETE),
+                $url_builder->withParameter($action_token, ilUserCleanerGUIConstants::TABLE_ACTION_DELETE),
                 $row_id_token
             ),
         ];
@@ -334,7 +314,7 @@ class ilUserCleanerExclusionsKitchenSinkTable implements DataRetrieval
         }
 
         $this->records = [];
-        foreach ($this->dbConnector->getExclusions() as $row) {
+        foreach ($this->exclusions->getAll() as $row) {
             $user_id = (int) $row['user_id'];
             $name = ilObjUser::_lookupName($user_id);
             $this->records[] = [

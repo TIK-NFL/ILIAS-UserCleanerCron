@@ -19,59 +19,44 @@ declare(strict_types=1);
  */
 
 /**
- * @author Ulf Bischoff <ulf.bischoff@tik.uni-stuttgart.de>
  * @ilCtrl_isCalledBy ilUserCleanerConfigGUI: ilObjComponentSettingsGUI
- * @ilCtrl_Calls ilUserCleanerConfigGUI: ilUserCleanerAuthGUI, ilUserCleanerExecutionTableGUI, ilUserCleanerExclusionsTableGUI, ilUserCleanerRulesTableGUI
+ * @ilCtrl_Calls ilUserCleanerConfigGUI: ilUserCleanerSettingsGUI, ilUserCleanerAuthGUI, ilUserCleanerExclusionsTableGUI, ilUserCleanerRulesTableGUI, ilUserCleanerProtocolGUI
  */
 
 
 class ilUserCleanerConfigGUI extends ilPluginConfigGUI
 {
-    private const COMPONENT_PARAMETERS = ['ctype', 'cname', 'slot_id', 'plugin_id', 'pname'];
-
     /** @var string[] */
     private const SUBTABS = [
+        'ilusercleanersettingsgui',
         'ilusercleanerauthgui',
         'ilusercleanerrulestablegui',
-        'ilusercleanerexecutiontablegui',
         'ilusercleanerexclusionstablegui',
+        'ilusercleanerprotocolgui',
     ];
-
-
-    public function __construct()
-    {
-      
-    }
-
     #[Override]
     public function performCommand(string $cmd): void
     {
-       
-    }
-
-    public function executeCommand(): void
-    {
-         global $DIC;
+        global $DIC;
 
         $ctrl = $DIC->ctrl();
 
         $this->preserveComponentParameters();
 
         $next_class = $ctrl->getNextClass($this);
-
         $this->setTabs($next_class);
 
         switch ($next_class) {
+            case strtolower(ilUserCleanerSettingsGUI::class):
+                $settings_gui = new ilUserCleanerSettingsGUI();
+                $settings_gui->setPluginObject($this->plugin_object);
+                $ctrl->forwardCommand($settings_gui);
+                break;
+
             case strtolower(ilUserCleanerAuthGUI::class):
                 $auth_gui = new ilUserCleanerAuthGUI();
                 $auth_gui->setPluginObject($this->plugin_object);
                 $ctrl->forwardCommand($auth_gui);
-                break;
-
-            case strtolower(ilUserCleanerExecutionTableGUI::class):
-                $execution_gui = new ilUserCleanerExecutionTableGUI();
-                $execution_gui->setPluginObject($this->plugin_object);
-                $ctrl->forwardCommand($execution_gui);
                 break;
 
             case strtolower(ilUserCleanerRulesTableGUI::class):
@@ -80,48 +65,31 @@ class ilUserCleanerConfigGUI extends ilPluginConfigGUI
                 $ctrl->forwardCommand($rules_gui);
                 break;
 
+            case strtolower(ilUserCleanerProtocolGUI::class):
+                $protocol_gui = new ilUserCleanerProtocolGUI();
+                $protocol_gui->setPluginObject($this->plugin_object);
+                $ctrl->forwardCommand($protocol_gui);
+                break;
+
             default:
             case strtolower(ilUserCleanerExclusionsTableGUI::class):
                 $exclusions_gui = new ilUserCleanerExclusionsTableGUI();
                 $exclusions_gui->setPluginObject($this->plugin_object);
                 $ctrl->forwardCommand($exclusions_gui);
                 break;
-
-
         }
     }
-
-
     private function preserveComponentParameters(): void
     {
-        foreach ([
+        ilUserCleanerGUIHelper::preserveComponentParameters([
             self::class,
             ilObjComponentSettingsGUI::class,
+            ilUserCleanerSettingsGUI::class,
             ilUserCleanerAuthGUI::class,
-            ilUserCleanerExecutionTableGUI::class,
             ilUserCleanerExclusionsTableGUI::class,
             ilUserCleanerRulesTableGUI::class,
-        ] as $class) {
-            foreach (self::COMPONENT_PARAMETERS as $parameter) {
-                $this->preserveComponentParameter($class, $parameter);
-            }
-        }
-    }
-
-    private function preserveComponentParameter(string $class, string $parameter): void
-    {
-        global $DIC;
-
-        $query = $DIC->http()->request()->getQueryParams();
-        if (!isset($query[$parameter]) || !is_string($query[$parameter])) {
-            return;
-        }
-
-        $DIC->ctrl()->setParameterByClass(
-            $class,
-            $parameter,
-            ilUtil::stripSlashes($query[$parameter])
-        );
+            ilUserCleanerProtocolGUI::class,
+        ]);
     }
 
     private function setTabs(string $next_class): void
@@ -131,17 +99,21 @@ class ilUserCleanerConfigGUI extends ilPluginConfigGUI
         $tabs = $DIC->tabs();
         $ctrl = $DIC->ctrl();
         $sub_tab_details = [
-            [self::SUBTABS[0], "subtab_name_general", ilUserCleanerAuthGUI::class],
-            [self::SUBTABS[1], "subtab_name_rules", ilUserCleanerRulesTableGUI::class],
-            [self::SUBTABS[2], "subtab_name_execution_rules", ilUserCleanerExecutionTableGUI::class],
+            [self::SUBTABS[0], "subtab_name_settings", ilUserCleanerSettingsGUI::class],
+            [self::SUBTABS[1], "subtab_name_general", ilUserCleanerAuthGUI::class],
+            [self::SUBTABS[2], "subtab_name_rule_sets", ilUserCleanerRulesTableGUI::class],
             [self::SUBTABS[3], "subtab_name_exclusions", ilUserCleanerExclusionsTableGUI::class],
+            [self::SUBTABS[4], "subtab_name_protocol", ilUserCleanerProtocolGUI::class],
         ];
 
         foreach ($sub_tab_details as [$id, $lang_key, $sub_tab]) {
             $tabs->addSubTab(
                 $id,
                 $this->plugin_object->txt($lang_key),
-                $ctrl->getLinkTargetByClass([ilObjComponentSettingsGUI::class, self::class, $sub_tab], "show")
+                $ctrl->getLinkTargetByClass(
+                    [ilObjComponentSettingsGUI::class, self::class, $sub_tab],
+                    ilUserCleanerGUIConstants::CMD_SHOW
+                )
             );
         }
 

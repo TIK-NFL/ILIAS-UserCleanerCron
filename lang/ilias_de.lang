@@ -1,8 +1,79 @@
 // subtab names
 subtab_name_general#:#Schnittstellen
-subtab_name_execution_rules#:#Regel-Verknüpfungen
+subtab_name_settings#:#Einstellungen
 subtab_name_exclusions#:#Nie löschen
-subtab_name_rules#:#Regeln
+subtab_name_rule_sets#:#Regelsätze
+subtab_name_protocol#:#Protokoll
+settings_form_title#:#Bereinigungseinstellungen
+settings_dry_run#:#Testlauf
+settings_dry_run_info#:#Passende Benutzer werden ausgewertet, aber nicht gelöscht. Lassen Sie diese Option während der Konfiguration und Prüfung der Regelsätze aktiviert.
+settings_cleanup_action#:#Aktion für passende Benutzer
+settings_cleanup_action_deactivate#:#Benutzerkonto deaktivieren
+settings_cleanup_action_deactivate_info#:#Verhindert die Anmeldung, ohne das Benutzerkonto oder seine Daten zu löschen.
+settings_cleanup_action_delete#:#Benutzerkonto mit der ILIAS-Standardbereinigung löschen
+settings_cleanup_action_delete_info#:#Löscht das Benutzerkonto. ILIAS entfernt dabei zugehörige persönliche Daten, Postfachdaten, Arbeitsraum und Portfolios. Repository-Objekte bleiben erhalten und ihr Besitzer wird zurückgesetzt.
+settings_protocol_retention_value#:#Protokoll-Aufbewahrung
+settings_protocol_retention_unit#:#Aufbewahrungseinheit
+settings_protocol_retention_info#:#Optional. Ältere Protokolleinträge und gespeicherte CSV-Exporte werden beim Cronlauf entfernt. Leer lassen, um sie unbegrenzt aufzubewahren.
+settings_retention_days#:#Tage
+settings_retention_months#:#Monate
+protocol_title#:#Bereinigungsprotokoll
+protocol_search#:#Suche
+protocol_search_info#:#Durchsucht Benutzer-ID, Matrikelnummer, Name, Login, externes Konto, E-Mail, Regelsatz und Regel.
+protocol_all_actions#:#Alle Aktionen
+protocol_apply_filter#:#Filter anwenden
+protocol_reset_filter#:#Filter zurücksetzen
+protocol_export_csv#:#CSV exportieren
+protocol_column_time#:#Zeitpunkt
+protocol_column_matriculation#:#Matrikelnummer
+protocol_column_name#:#Name
+protocol_column_login#:#Login
+protocol_column_email#:#E-Mail
+protocol_column_action#:#Aktion
+protocol_column_rule_sets#:#Regelsätze
+protocol_column_rules#:#Regeln
+protocol_action_dry_run#:#Testlauf
+protocol_action_deactivate#:#Deaktivieren
+protocol_action_delete#:#Löschen
+protocol_date_from#:#Datum von
+protocol_date_to#:#Datum bis
+protocol_rule_set#:#Regelsatz
+protocol_all_rule_sets#:#Alle Regelsätze
+
+// rule sets
+rule_sets_create_title#:#Regelsatz erstellen
+rule_sets_add#:#Regelsatz hinzufügen
+rule_sets_edit_title#:#Regelsatz bearbeiten
+rule_sets_manage_rules#:#Regeln verwalten
+rule_sets_saved#:#Änderungen gespeichert.
+rule_sets_deleted#:#Regelsatz gelöscht.
+rule_sets_confirm_delete#:#Möchten Sie diesen Regelsatz und alle enthaltenen Regeln wirklich löschen?
+rule_sets_field_title#:#Titel
+rule_sets_field_description#:#Beschreibung
+rule_sets_field_role#:#Globale Zielrolle
+rule_sets_field_auth_mode#:#Authentifizierung
+rule_sets_field_enabled#:#Aktiviert
+rule_sets_table_title#:#Regelsätze (Verknüpfung der Sätze mit ODER)
+rule_sets_column_rules#:#Regeln
+rule_sets_column_condition#:#Bedingung (UND)
+rule_sets_column_sources#:#Geprüfte Datenquelle
+rule_sets_add_rule_title#:#UND-Regel hinzufügen
+rule_sets_rules_table_title#:#Regeln in diesem Satz (alle müssen zutreffen)
+rule_sets_column_sequence#:#Reihenfolge
+rule_sets_column_rule#:#Regel
+rule_sets_column_auth_mode#:#Authentifizierung
+rule_sets_column_source#:#Datenquelle
+rule_source_local_database#:#Lokale ILIAS-Datenbank
+rule_source_ldap#:#LDAP-Schnittstelle
+rule_source_rest#:#REST-Schnittstelle
+rule_source_not_configured#:#nicht konfiguriert
+rule_source_ldap_authentication#:#Authentifizierungsserver
+rule_source_ldap_data_source#:#Authentifizierungs-Datenquelle
+rule_source_active#:#aktiv
+rule_source_inactive#:#inaktiv
+rule_source_missing_configuration#:#Konfiguration fehlt
+rule_sets_source_configuration#:#Konfiguration der externen Quelle
+rule_sets_ldap_source_required#:#Bitte eine bestehende ILIAS-LDAP-Konfiguration für eine LDAP-Existenzregel auswählen.
 
 // exclusion table
 exclusion_table_title#:#Nie löschen
@@ -12,19 +83,15 @@ exclusion_table_column_name#:#Name
 exclusion_table_column_email#:#E-Mail
 
 // rules table
-rules_table_title#:#Regeln
-rules_table_column_rule_id#:#Regel-ID
-rules_table_column_parameter#:#Parameter
-rules_table_column_symbol#:#Symbol
-rules_table_column_value#:#Wert
 rules_table_input_parameter#:#Parameter
 rules_table_input_symbol#:#Symbol
 rules_table_input_value#:#Wert
-rules_form_title#:#Regel hinzufügen
-rules_form_no_parameters#:#Es sind noch keine Parameter verfügbar.
 // parameters
 parameter_last_login_months#:#Letzter Login (in Monaten)
 parameter_external_account_missing#:#Account existiert nicht mehr
+parameter_last_login_days#:#Letzter Login (in Tagen)
+parameter_external_account_missing_ldap#:#Account existiert nicht mehr im LDAP
+parameter_external_account_missing_rest#:#Account existiert nicht mehr über die REST-API (nicht implementiert)
 // auth modes
 auth_mode_default#:#Lokale ILIAS-Authentifizierung
 auth_mode_ldap#:#LDAP
@@ -34,52 +101,10 @@ auth_mode_saml#:#SAML
 auth_mode_oidc#:#OpenID Connect
 auth_mode_script#:#Externes Authentifizierungsskript
 auth_mode_local#:#System Accounts
-// execution rules table
-execution_rules_table_title#:#Regeln-Verknüpfungen und basiert
-execution_rules_table_column_execution_id#:#Verknüpfungs-ID
-execution_rules_table_column_rule#:#Regel
-execution_rules_table_column_auth_mode#:#Authentifizierung
-execution_rules_table_column_role#:#Globale Rolle
-execution_rules_table_input_rule#:#Regel
-execution_rules_table_input_auth_mode#:#Authentifizierung
-execution_rules_table_input_role#:#Globale Rolle
-execution_rules_form_title#:#Regel verknüpfen
-execution_rules_form_no_rules#:#Es sind noch keine Regeln verfügbar.
-execution_rules_form_no_auth_modes#:#Es sind noch keine Authentifizierungsarten verfügbar.
-execution_rules_form_no_roles#:#Es sind keine globalen Rollen verfügbar.
 // auth configuration
 auth_form_title#:#Externe Prüfquellen
+auth_ldap_existing_sources#:#Verfügbare Konfigurationen
+auth_ldap_existing_sources_info#:#LDAP-Zugangsdaten und Verbindungsdetails werden durch ILIAS verwaltet. Die Konfiguration wird direkt an einer LDAP-Regel ausgewählt.
+auth_ldap_no_existing_sources#:#Es sind keine ILIAS-LDAP-Konfigurationen verfügbar.
 auth_rest_section_title#:#REST-Prüfung
-auth_rest_url_template#:#Status-URL
-auth_rest_url_template_info#:#URL zur externen Account-Prüfung. {login} kann als Platzhalter für den ILIAS-Benutzernamen verwendet werden.
-auth_rest_auth_header#:#HTTP Authorization Header
-auth_rest_auth_header_info#:#Optionaler Authorization-Header, z. B. Bearer TOKEN.
-auth_rest_active_json_path#:#JSON-Pfad für Aktivstatus
-auth_rest_active_json_path_info#:#Optionaler Punktpfad im JSON, z. B. active oder account.enabled.
-auth_rest_active_value#:#Aktiv-Wert
-auth_rest_active_value_info#:#Wert, der als aktiv gilt, z. B. true, 1 oder active.
-auth_ldap_section_title#:#LDAP-Prüfung
-auth_ldap_status_attribute#:#LDAP-Statusattribut
-auth_ldap_status_attribute_info#:#Optionales LDAP-Attribut, das den Accountstatus enthält.
-auth_ldap_active_value#:#LDAP-Aktiv-Wert
-auth_ldap_active_value_info#:#Wert des Statusattributs, der als aktiv gilt.
-auth_rest_connection_test_login#:#Test-Benutzername
-auth_rest_connection_test_login_info#:#Optionaler Benutzername fuer den REST-Verbindungstest. Wird in der Status-URL fuer {login} eingesetzt.
-auth_ldap_host#:#LDAP-Host
-auth_ldap_host_info#:#Hostname oder IP des LDAP-Servers fuer den Verbindungstest.
-auth_ldap_port#:#LDAP-Port
-auth_ldap_port_info#:#Port des LDAP-Servers. Standard ist 389.
-auth_ldap_bind_dn#:#LDAP Bind-DN
-auth_ldap_bind_dn_info#:#Optionaler technischer Benutzer fuer den Verbindungstest. Leer lassen fuer anonymes Binding.
-auth_ldap_bind_password#:#LDAP Bind-Passwort
-auth_ldap_bind_password_info#:#Optionales Passwort fuer den technischen Bind-Benutzer.
-auth_connection_test_rest_skipped#:#REST-Test uebersprungen: keine Status-URL konfiguriert.
-auth_connection_test_rest_missing_login#:#REST-Test fehlgeschlagen: Die Status-URL enthaelt {login}, aber es ist kein Test-Benutzername gesetzt.
-auth_connection_test_rest_curl_missing#:#REST-Test fehlgeschlagen: Die PHP-cURL-Erweiterung ist nicht verfuegbar.
-auth_connection_test_rest_failed#:#REST-Test fehlgeschlagen: Die Verbindung konnte nicht initialisiert werden.
-auth_connection_test_rest_failed_with_status#:#REST-Test fehlgeschlagen: Antwortstatus/Fehler %s.
-auth_connection_test_rest_success#:#REST-Test erfolgreich: HTTP-Status %s.
-auth_connection_test_ldap_skipped#:#LDAP-Test uebersprungen: kein LDAP-Host konfiguriert.
-auth_connection_test_ldap_extension_missing#:#LDAP-Test fehlgeschlagen: Die PHP-LDAP-Erweiterung ist nicht verfuegbar.
-auth_connection_test_ldap_failed#:#LDAP-Test fehlgeschlagen: Verbindung oder Bind war nicht erfolgreich.
-auth_connection_test_ldap_success#:#LDAP-Test erfolgreich: Verbindung und Bind waren erfolgreich.
+auth_rest_not_implemented#:#Nicht implementiert. REST-Regeln können derzeit weder erstellt noch ausgewertet werden; bestehende REST-Regeln werden sicher übersprungen.
