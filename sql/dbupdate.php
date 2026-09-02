@@ -24,12 +24,6 @@ $tables = [
         'auth_id' => ['type' => 'integer', 'length' => 4, 'notnull' => true],
         'auth_mode' => ['type' => 'text', 'length' => 100, 'notnull' => true],
     ],
-    'ucc_execution_rules' => [
-        'execution_id' => ['type' => 'integer', 'length' => 4, 'notnull' => true],
-        'rule_id' => ['type' => 'integer', 'length' => 4, 'notnull' => true],
-        'auth_id' => ['type' => 'integer', 'length' => 4, 'notnull' => true],
-        'role_id' => ['type' => 'integer', 'length' => 4, 'notnull' => true],
-    ],
     'ucc_exclusion' => [
         'exclusion_id' => ['type' => 'integer', 'length' => 4, 'notnull' => true],
         'user_id' => ['type' => 'integer', 'length' => 4, 'notnull' => true],
@@ -47,7 +41,6 @@ $tables = [
         'rule_set_id' => ['type' => 'integer', 'length' => 4, 'notnull' => true],
         'rule_id' => ['type' => 'integer', 'length' => 4, 'notnull' => true],
         'sequence_no' => ['type' => 'integer', 'length' => 4, 'notnull' => true],
-        'source_execution_id' => ['type' => 'integer', 'length' => 4, 'notnull' => false],
     ],
     'ucc_protocol' => [
         'protocol_id' => ['type' => 'integer', 'length' => 4, 'notnull' => true],
@@ -85,10 +78,9 @@ foreach ($tables as $table => $columns) {
 
 $indexes = [
     'ucc_rule' => [['parameter_id']],
-    'ucc_execution_rules' => [['rule_id'], ['auth_id'], ['role_id']],
     'ucc_exclusion' => [['user_id']],
     'ucc_rule_set' => [['role_id'], ['auth_id']],
-    'ucc_rule_set_rule' => [['rule_set_id'], ['rule_id'], ['source_execution_id']],
+    'ucc_rule_set_rule' => [['rule_set_id'], ['rule_id']],
     'ucc_protocol' => [['user_id'], ['login'], ['created_at']],
     'ucc_protocol_export' => [['created_at'], ['resource_id']],
 ];
@@ -103,6 +95,10 @@ foreach ($indexes as $table => $field_sets) {
 foreach ([
     'last_login_months' => ['local_database', 1, 0],
     'last_login_days' => ['local_database', 1, 0],
+    'account_age_months' => ['local_database', 1, 0],
+    'account_age_days' => ['local_database', 1, 0],
+    'account_has_logged_in' => ['local_database', 0, 0],
+    'account_never_logged_in' => ['local_database', 0, 0],
     'external_account_missing_ldap' => ['ldap', 0, 1],
     'external_account_missing_rest' => ['rest', 0, 1],
 ] as $parameter => [$source_type, $value_required, $configuration_required]) {
@@ -119,6 +115,32 @@ foreach (['default', 'ldap', 'cas', 'shibboleth', 'saml', 'oidc', 'script', 'loc
     $ilDB->insert('ucc_auth', [
         'auth_id' => ['integer', $ilDB->nextId('ucc_auth')],
         'auth_mode' => ['text', $auth_mode],
+    ]);
+}
+?>
+
+<#2>
+<?php
+foreach ([
+    'account_age_months' => ['local_database', 1, 0],
+    'account_age_days' => ['local_database', 1, 0],
+    'account_has_logged_in' => ['local_database', 0, 0],
+    'account_never_logged_in' => ['local_database', 0, 0],
+] as $parameter => [$source_type, $value_required, $configuration_required]) {
+    $result = $ilDB->queryF(
+        'SELECT parameter_id FROM ucc_parameter WHERE parameter = %s',
+        ['text'],
+        [$parameter]
+    );
+    if ($ilDB->fetchAssoc($result)) {
+        continue;
+    }
+    $ilDB->insert('ucc_parameter', [
+        'parameter_id' => ['integer', $ilDB->nextId('ucc_parameter')],
+        'parameter' => ['text', $parameter],
+        'source_type' => ['text', $source_type],
+        'value_required' => ['integer', $value_required],
+        'configuration_required' => ['integer', $configuration_required],
     ]);
 }
 ?>

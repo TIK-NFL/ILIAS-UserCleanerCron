@@ -34,13 +34,29 @@ final class ilUserCleanerDecision
             || $is_excluded;
     }
 
-    public static function ageInDays(?string $last_login, DateTimeImmutable $now): int
+    public static function ageInDays(?string $point_in_time, DateTimeImmutable $now): int
     {
-        if ($last_login === null || trim($last_login) === '') {
-            return PHP_INT_MAX;
+        if ($point_in_time === null || trim($point_in_time) === '') {
+            return 0;
         }
-        $login = new DateTimeImmutable($last_login);
+        $login = new DateTimeImmutable($point_in_time);
         return $login > $now ? 0 : (int) $login->diff($now)->format('%a');
+    }
+
+    public static function ageInMonths(?string $point_in_time, DateTimeImmutable $now): int
+    {
+        return intdiv(self::ageInDays($point_in_time, $now), 30);
+    }
+
+    public static function externalAccountIdentifier(string $external_account, string $login): string
+    {
+        $external_account = trim($external_account);
+        return $external_account === '' ? $login : $external_account;
+    }
+
+    public static function hasLoggedIn(?string $last_login): bool
+    {
+        return $last_login !== null && trim($last_login) !== '';
     }
 
     public static function compare(int $actual, string $symbol, int $expected): bool

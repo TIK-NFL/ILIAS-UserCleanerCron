@@ -221,6 +221,19 @@ final class ilUserCleanerRulesTableGUI
 
         $parameter_id = (int) $form->getInput(ilUserCleanerGUIConstants::FIELD_PARAMETER_ID);
         $type = $this->rules->getType($parameter_id);
+        if ($this->hasConflictingLoginStateRule($rule_set->id, $type->key)) {
+            $parameter = $form->getItemByPostVar(ilUserCleanerGUIConstants::FIELD_PARAMETER_ID);
+            if ($parameter instanceof ilFormPropertyGUI) {
+                $parameter->setAlert($this->pluginObject->txt('rule_sets_conflicting_login_state'));
+            }
+            $form->setValuesByPost();
+            $content = $form->getHTML();
+            $content .= $this->uiRenderer->render(
+                $this->getRulesTable($rule_set->id)->getComponent()->withRequest($this->http->request())
+            );
+            $this->template->setContent($content);
+            return;
+        }
         $source_config_id = trim((string) $form->getInput(
             $this->getRuleFieldName(ilUserCleanerGUIConstants::FIELD_SOURCE_CONFIG_ID, $parameter_id)
         ));
@@ -245,6 +258,25 @@ final class ilUserCleanerRulesTableGUI
         );
         $this->setSavedMessage();
         $this->redirectToRuleSetRules($rule_set->id);
+    }
+
+    private function hasConflictingLoginStateRule(int $rule_set_id, string $new_parameter): bool
+    {
+        $opposite = match ($new_parameter) {
+            'account_has_logged_in' => 'account_never_logged_in',
+            'account_never_logged_in' => 'account_has_logged_in',
+            default => null,
+        };
+        if ($opposite === null) {
+            return false;
+        }
+
+        foreach ($this->memberships->getByRuleSetId($rule_set_id) as $membership) {
+            if ($this->rules->getById($membership->ruleId)?->parameter === $opposite) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private function deleteRuleSetRules(): void

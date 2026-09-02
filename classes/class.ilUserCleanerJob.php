@@ -20,7 +20,7 @@ declare(strict_types=1);
 
 use ILIAS\Cron\Schedule\CronJobScheduleType;
 
-require_once __DIR__ . '/General/class.ilUserCleanerProtocolExportRepository.php';
+require_once __DIR__ . '/Export/class.ilUserCleanerProtocolExportRepository.php';
 
 class ilUserCleanerJob extends ilCronJob
 {
@@ -71,18 +71,28 @@ class ilUserCleanerJob extends ilCronJob
 
     public function run(): ilCronJobResult
     {
+        global $DIC;
+
         $result = new ilCronJobResult();
+        $logger = $DIC->logger()->user();
+        $started_at = microtime(true);
+        $logger->info('UserCleaner cron run started.');
 
         try {
             $settings = new ilUserCleanerSettingsRepository();
             $retention = $settings->getProtocolRetention();
             if ($retention !== null) {
+                $cutoff = $retention->getCutoff(new DateTimeImmutable());
                 (new ilUserCleanerProtocolRepository())->deleteOlderThan(
-                    $retention->getCutoff(new DateTimeImmutable())
+                    $cutoff
                 );
                 (new ilUserCleanerProtocolExportRepository())->deleteOlderThan(
-                    $retention->getCutoff(new DateTimeImmutable())
+                    $cutoff
                 );
+                $logger->info(sprintf(
+                    'UserCleaner protocol retention cleanup completed for records before %s.',
+                    $cutoff->format(DateTimeInterface::ATOM)
+                ));
             }
             $evaluation = (new ilUserCleanerEvaluator())->evaluate();
             $action_result = null;
@@ -122,9 +132,20 @@ class ilUserCleanerJob extends ilCronJob
                     : ilCronJobResult::STATUS_OK
             );
             $result->setMessage($message);
+            $logger->info(sprintf(
+                'UserCleaner cron run completed in %.3f seconds: %s',
+                microtime(true) - $started_at,
+                $message
+            ));
         } catch (Throwable $e) {
             $result->setStatus(ilCronJobResult::STATUS_FAIL);
             $result->setMessage($e->getMessage());
+            $logger->error(sprintf(
+                'UserCleaner cron run failed after %.3f seconds: %s',
+                microtime(true) - $started_at,
+                $e->getMessage()
+            ));
+            $logger->debug($e->getTraceAsString());
         }
 
         return $result;

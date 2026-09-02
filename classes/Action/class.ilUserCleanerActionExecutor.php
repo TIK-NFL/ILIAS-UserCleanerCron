@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/class.ilUserCleanerDecision.php';
+require_once __DIR__ . '/../Evaluation/class.ilUserCleanerDecision.php';
 
 final class ilUserCleanerActionExecutor
 {
@@ -40,6 +40,10 @@ final class ilUserCleanerActionExecutor
                 $this->exclusions->containsUser($user_id)
             )) {
                 ++$unchanged;
+                $this->logger->debug(sprintf(
+                    'UserCleaner did not modify protected user ID %d.',
+                    $user_id
+                ));
                 continue;
             }
 
@@ -48,6 +52,10 @@ final class ilUserCleanerActionExecutor
                 $user = ilObjectFactory::getInstanceByObjId($user_id, false);
                 if (!$user instanceof ilObjUser) {
                     ++$unchanged;
+                    $this->logger->warning(sprintf(
+                        'UserCleaner could not load matched user ID %d; no action was applied.',
+                        $user_id
+                    ));
                     continue;
                 }
 
@@ -57,6 +65,10 @@ final class ilUserCleanerActionExecutor
                     if (!$user->getActive()) {
                         $this->protocol->finish($protocol_id, 'unchanged');
                         ++$unchanged;
+                        $this->logger->debug(sprintf(
+                            'UserCleaner did not deactivate user ID %d because the account is already inactive.',
+                            $user_id
+                        ));
                         continue;
                     }
                     $user->setActive(false, $this->actorId);

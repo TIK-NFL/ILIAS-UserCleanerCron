@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-final class ilUserCleanerLDAPAccountChecker
+final class ilUserCleanerLDAPAccountChecker implements ilUserCleanerLDAPAccountLookup
 {
     /** @var array<int, array{server: ilLDAPServer, query: ilLDAPQuery}> */
     private array $connections = [];
@@ -14,14 +14,7 @@ final class ilUserCleanerLDAPAccountChecker
 
     public function accountExists(string $configuration_id, string $account): bool
     {
-        if (!preg_match('/^ldap:(\d+)$/', $configuration_id, $matches)) {
-            throw new RuntimeException('Invalid LDAP source configuration.');
-        }
-        if (!function_exists('ldap_escape')) {
-            throw new RuntimeException('The PHP LDAP extension is not available.');
-        }
-
-        $server_id = (int) $matches[1];
+        $server_id = $this->getServerId($configuration_id);
         $connection = $this->getConnection($server_id);
         $server = $connection['server'];
         $search_base = $server->getSearchBase();
@@ -47,6 +40,23 @@ final class ilUserCleanerLDAPAccountChecker
         } catch (Throwable $exception) {
             throw new RuntimeException('LDAP account lookup failed.', 0, $exception);
         }
+    }
+
+    public function assertConfigurationAvailable(string $configuration_id): void
+    {
+        $this->getConnection($this->getServerId($configuration_id));
+    }
+
+    private function getServerId(string $configuration_id): int
+    {
+        if (!preg_match('/^ldap:(\d+)$/', $configuration_id, $matches)) {
+            throw new RuntimeException('Invalid LDAP source configuration.');
+        }
+        if (!function_exists('ldap_escape')) {
+            throw new RuntimeException('The PHP LDAP extension is not available.');
+        }
+
+        return (int) $matches[1];
     }
 
     /** @return array{server: ilLDAPServer, query: ilLDAPQuery} */

@@ -90,8 +90,13 @@ rules_table_input_value#:#Wert
 parameter_last_login_months#:#Letzter Login (in Monaten)
 parameter_external_account_missing#:#Account existiert nicht mehr
 parameter_last_login_days#:#Letzter Login (in Tagen)
+parameter_account_age_days#:#Alter des Benutzerkontos (in Tagen)
+parameter_account_age_months#:#Alter des Benutzerkontos (in Monaten)
+parameter_account_has_logged_in#:#Benutzerkonto wurde bereits verwendet
+parameter_account_never_logged_in#:#Benutzerkonto wurde noch nie verwendet
 parameter_external_account_missing_ldap#:#Account existiert nicht mehr im LDAP
 parameter_external_account_missing_rest#:#Account existiert nicht mehr über die REST-API (nicht implementiert)
+rule_sets_conflicting_login_state#:#Ein Regelsatz kann nicht gleichzeitig „Benutzerkonto wurde bereits verwendet“ und „Benutzerkonto wurde noch nie verwendet“ enthalten.
 // auth modes
 auth_mode_default#:#Lokale ILIAS-Authentifizierung
 auth_mode_ldap#:#LDAP
