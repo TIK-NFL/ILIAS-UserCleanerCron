@@ -69,4 +69,20 @@ final class ilUserCleanerProtocolExportRepository extends ilUserCleanerDatabaseR
             );
         }
     }
+
+    public function deleteAll(): void
+    {
+        if (!$this->database->tableExists(self::TABLE)) {
+            return;
+        }
+
+        foreach ($this->fetchAll('SELECT resource_id FROM ' . self::TABLE) as $row) {
+            $resource_id = $this->storage->manage()->find((string) $row['resource_id']);
+            if ($resource_id !== null) {
+                $this->storage->manage()->remove($resource_id, $this->stakeholder);
+            }
+        }
+
+        $this->database->manipulate('DELETE FROM ' . self::TABLE);
+    }
 }

@@ -20,6 +20,19 @@ declare(strict_types=1);
 
 class ilUserCleanerPlugin extends ilCronHookPlugin
 {
+    private const DATABASE_TABLES = [
+        'ucc_rule_set_rule',
+        'ucc_execution_rules',
+        'ucc_rule',
+        'ucc_rule_set',
+        'ucc_exclusion',
+        'ucc_protocol_export',
+        'ucc_protocol',
+        'ucc_parameter',
+        'ucc_auth',
+        'ucc_config',
+    ];
+
     public function getPluginName(): string
     {
         return "UserCleaner";
@@ -52,4 +65,30 @@ class ilUserCleanerPlugin extends ilCronHookPlugin
         throw new OutOfBoundsException("Unknown cron job: " . $jobId);
     }
 
+    protected function beforeUninstall(): bool
+    {
+        global $DIC;
+
+        $database = $DIC->database();
+        (new ilUserCleanerProtocolExportRepository())->deleteAll();
+
+        if ($database->tableExists('cron_job')) {
+            $database->manipulateF(
+                'DELETE FROM cron_job WHERE job_id = %s',
+                ['text'],
+                ['ucc']
+            );
+        }
+
+        foreach (self::DATABASE_TABLES as $table) {
+            if ($database->tableExists($table)) {
+                $database->dropTable($table);
+            }
+            if ($database->sequenceExists($table)) {
+                $database->dropSequence($table);
+            }
+        }
+
+        return true;
+    }
 }
