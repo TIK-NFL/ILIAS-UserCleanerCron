@@ -17,7 +17,9 @@
 >
 > Read the **[Operations and Safety Guide](doku.md)** before configuring or
 > running cleanup. It includes the rollout procedure and go/no-go checklist.
-
+>
+> You are solely responsible for testing, configuring, and operating this plugin, verifying backups, and ensuring compliance with applicable laws and organizational policies.
+>
 ## Overview
 
 **UserCleaner** is an ILIAS 10 CronHook plugin for rule-based user-account
