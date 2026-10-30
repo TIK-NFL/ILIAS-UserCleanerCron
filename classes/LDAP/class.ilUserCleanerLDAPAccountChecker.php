@@ -3,20 +3,25 @@ declare(strict_types=1);
 
 final class ilUserCleanerLDAPAccountChecker implements ilUserCleanerLDAPAccountLookup
 {
-    /** @var array<int, array{server: ilLDAPServer, query: ilLDAPQuery}> */
-    private array $connections = [];
     private ilUserCleanerLDAPSourceRepository $sources;
+    private ilUserCleanerLDAPDirectory $directory;
+    private Closure $loadServer;
 
-    public function __construct()
-    {
-        $this->sources = new ilUserCleanerLDAPSourceRepository();
+    public function __construct(
+        ?ilUserCleanerLDAPSourceRepository $sources = null,
+        ?ilUserCleanerLDAPDirectory $directory = null,
+        ?Closure $load_server = null
+    ) {
+        $this->sources = $sources ?? new ilUserCleanerLDAPSourceRepository();
+        $this->directory = $directory ?? new ilUserCleanerNativeLDAPDirectory();
+        $this->loadServer = $load_server
+            ?? static fn(int $id): ilLDAPServer => ilLDAPServer::getInstanceByServerId($id);
     }
 
     public function accountExists(string $configuration_id, string $account): bool
     {
         $server_id = $this->getServerId($configuration_id);
-        $connection = $this->getConnection($server_id);
-        $server = $connection['server'];
+        $server = $this->getServer($server_id);
         $search_base = $server->getSearchBase();
         if ($search_base !== '' && !str_ends_with($search_base, ',')) {
             $search_base .= ',';
@@ -31,20 +36,24 @@ final class ilUserCleanerLDAPAccountChecker implements ilUserCleanerLDAPAccountL
         );
 
         try {
-            return $connection['query']->query(
-                strtolower($search_base),
+            return $this->directory->hasEntry(
+                $server,
+                $search_base,
                 $filter,
-                $server->getUserScope(),
                 [$server->getUserAttribute()]
-            )->numRows() > 0;
+            );
         } catch (Throwable $exception) {
-            throw new RuntimeException('LDAP account lookup failed.', 0, $exception);
+            throw new RuntimeException(
+                'LDAP account lookup failed; the account was not classified as missing.',
+                0,
+                $exception
+            );
         }
     }
 
     public function assertConfigurationAvailable(string $configuration_id): void
     {
-        $this->getConnection($this->getServerId($configuration_id));
+        $this->directory->assertAvailable($this->getServer($this->getServerId($configuration_id)));
     }
 
     private function getServerId(string $configuration_id): int
@@ -59,29 +68,22 @@ final class ilUserCleanerLDAPAccountChecker implements ilUserCleanerLDAPAccountL
         return (int) $matches[1];
     }
 
-    /** @return array{server: ilLDAPServer, query: ilLDAPQuery} */
-    private function getConnection(int $server_id): array
+    private function getServer(int $server_id): ilLDAPServer
     {
-        if (isset($this->connections[$server_id])) {
-            return $this->connections[$server_id];
-        }
-
         $source = $this->sources->getById($server_id);
         if ($source === null || !$source->active) {
             throw new RuntimeException('The selected LDAP source is missing or inactive.');
         }
 
         try {
-            $server = ilLDAPServer::getInstanceByServerId($server_id);
+            $server = ($this->loadServer)($server_id);
             if ($server->getUserAttribute() === '' || $server->getBaseDN() === '') {
                 throw new RuntimeException('The selected LDAP source is incomplete.');
             }
-            $query = new ilLDAPQuery($server);
-            $query->bind();
         } catch (Throwable $exception) {
-            throw new RuntimeException('LDAP connection failed.', 0, $exception);
+            throw new RuntimeException('LDAP source configuration could not be loaded.', 0, $exception);
         }
 
-        return $this->connections[$server_id] = ['server' => $server, 'query' => $query];
+        return $server;
     }
 }

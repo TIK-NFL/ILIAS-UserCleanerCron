@@ -14,7 +14,7 @@ settings_cleanup_action_delete#:#Delete account using standard ILIAS cleanup
 settings_cleanup_action_delete_info#:#Delete the account and let ILIAS remove associated personal data, mailbox data, workspace and portfolios. Repository objects remain and their owner is reset.
 settings_protocol_retention_value#:#Protocol retention
 settings_protocol_retention_unit#:#Retention unit
-settings_protocol_retention_info#:#Optional. Protocol records and stored CSV exports older than this period are removed when the cron job runs. Leave empty to retain them indefinitely.
+settings_protocol_retention_info#:#Optional. Protocol records and stored CSV exports older than this period are removed when the cron job runs. Leave empty to retain them indefinitely. Unresolved and failed deletion records are retained for review.
 settings_retention_days#:#Days
 settings_retention_months#:#Months
 protocol_title#:#Cleanup protocol
@@ -28,6 +28,7 @@ protocol_column_time#:#Time
 protocol_column_matriculation#:#Matriculation number
 protocol_column_name#:#Name
 protocol_column_login#:#Login
+protocol_column_external_account#:#External account
 protocol_column_email#:#Email
 protocol_column_action#:#Action
 protocol_column_rule_sets#:#Rule sets
@@ -45,6 +46,8 @@ rule_sets_create_title#:#Create rule set
 rule_sets_add#:#Add rule set
 rule_sets_edit_title#:#Edit rule set
 rule_sets_manage_rules#:#Manage rules
+rule_sets_view_rules#:#View rules
+rule_sets_locked_running#:#Rule configuration is read-only because the User Cleaner cron job is currently running. Wait for the run to finish or reset a stale run in the ILIAS cron administration.
 rule_sets_saved#:#Changes saved.
 rule_sets_deleted#:#Rule set deleted.
 rule_sets_confirm_delete#:#Do you really want to delete this rule set and all of its rules?
@@ -77,6 +80,7 @@ rule_sets_ldap_source_required#:#Select an existing ILIAS LDAP configuration for
 
 // exclusion table
 exclusion_table_title#:#Never delete
+exclusion_form_title#:#Add user to Never delete
 exclusion_table_column_user_id#:#User ID
 exclusion_table_column_login#:#Login
 exclusion_table_column_name#:#Name
@@ -113,3 +117,14 @@ auth_ldap_existing_sources_info#:#LDAP credentials and connection details are ma
 auth_ldap_no_existing_sources#:#No ILIAS LDAP configurations are available.
 auth_rest_section_title#:#REST check
 auth_rest_not_implemented#:#Not implemented. REST rules cannot currently be created or evaluated; existing REST rules are skipped safely.
+
+auth_mode_ecs#:#ECS (CampusConnect)
+
+protocol_column_status#:#Outcome
+protocol_column_error#:#Error details
+protocol_status_pending#:#Started; outcome not yet confirmed
+protocol_status_deleting#:#Account disabled; deletion outcome not yet confirmed
+protocol_status_success#:#Completed
+protocol_status_failed#:#Failed; changes may be partial
+protocol_status_unchanged#:#Unchanged
+protocol_status_dry_run#:#Dry run

@@ -6,15 +6,26 @@ use ILIAS\Refinery\Factory as RefineryFactory;
 use ILIAS\UI\Factory as UIFactory;
 use ILIAS\UI\Renderer as UIRenderer;
 
+require_once __DIR__ . '/../class.ilUserCleanerCronRunState.php';
+
 /**
  * @ilCtrl_isCalledBy ilUserCleanerRulesTableGUI: ilUserCleanerConfigGUI
  * @ilCtrl_Calls ilUserCleanerRulesTableGUI:
  */
 final class ilUserCleanerRulesTableGUI
 {
+    private const LOCKED_COMMANDS = [
+        ilUserCleanerGUIConstants::CMD_SAVE_RULE_SET,
+        ilUserCleanerGUIConstants::CMD_EDIT_RULE_SET,
+        ilUserCleanerGUIConstants::CMD_UPDATE_RULE_SET,
+        ilUserCleanerGUIConstants::CMD_DELETE_RULE_SET,
+        ilUserCleanerGUIConstants::CMD_CONFIRM_DELETE_RULE_SET,
+        ilUserCleanerGUIConstants::CMD_ADD_RULE,
+        ilUserCleanerGUIConstants::CMD_DELETE_RULE_SET_RULES,
+    ];
+
     private ilCtrlInterface $ctrl;
     private ilGlobalTemplateInterface $template;
-    private ilToolbarGUI $toolbar;
     private ilLanguage $language;
     private HTTPServices $http;
     private RefineryFactory $refinery;
@@ -26,6 +37,7 @@ final class ilUserCleanerRulesTableGUI
     private ilUserCleanerRoleTargetRepository $targets;
     private ilUserCleanerLDAPSourceRepository $ldapSources;
     private ilUserCleanerAuthModeRepository $authModes;
+    private ilUserCleanerCronRunState $cronRunState;
     private ilPlugin $pluginObject;
 
     public function __construct()
@@ -34,7 +46,6 @@ final class ilUserCleanerRulesTableGUI
 
         $this->ctrl = $DIC->ctrl();
         $this->template = $DIC->ui()->mainTemplate();
-        $this->toolbar = $DIC->toolbar();
         $this->language = $DIC->language();
         $this->http = $DIC->http();
         $this->refinery = $DIC->refinery();
@@ -46,6 +57,7 @@ final class ilUserCleanerRulesTableGUI
         $this->targets = new ilUserCleanerRoleTargetRepository();
         $this->ldapSources = new ilUserCleanerLDAPSourceRepository();
         $this->authModes = new ilUserCleanerAuthModeRepository();
+        $this->cronRunState = ilUserCleanerCronRunState::fromDIC();
     }
 
     public function setPluginObject(ilPlugin $plugin_object): void
@@ -62,7 +74,12 @@ final class ilUserCleanerRulesTableGUI
         ]);
         $this->preserveRuleSetId();
 
-        switch ($this->ctrl->getCmd(ilUserCleanerGUIConstants::CMD_SHOW)) {
+        $command = $this->ctrl->getCmd(ilUserCleanerGUIConstants::CMD_SHOW);
+        if (in_array($command, self::LOCKED_COMMANDS, true) && $this->cronRunState->isRunning()) {
+            $this->rejectRuleConfigurationChange();
+        }
+
+        switch ($command) {
             case ilUserCleanerGUIConstants::CMD_SAVE_RULE_SET:
                 $this->saveRuleSet();
                 return;
@@ -94,18 +111,25 @@ final class ilUserCleanerRulesTableGUI
 
     public function show(): void
     {
+        $locked = $this->cronRunState->isRunning();
         $sets = $this->ruleSets->getAll();
-        $modal = $this->getCreateRuleSetModal();
-        $this->toolbar->addComponent(
-            $this->uiFactory->button()->primary(
+        $components = [];
+        if ($locked) {
+            $components[] = $this->uiFactory->messageBox()->info(
+                $this->pluginObject->txt('rule_sets_locked_running')
+            );
+        } else {
+            $modal = $this->getCreateRuleSetModal();
+            $components[] = $this->uiFactory->button()->primary(
                 $this->pluginObject->txt('rule_sets_add'),
                 $modal->getShowSignal()
-            )
-        );
-        $this->template->setContent($this->uiRenderer->render([
-            $modal,
-            $this->getRuleSetsTable($sets)->getComponent()->withRequest($this->http->request()),
-        ]));
+            );
+            $components[] = $modal;
+        }
+        $components[] = $this->getRuleSetsTable($sets, $locked)
+            ->getComponent()
+            ->withRequest($this->http->request());
+        $this->template->setContent($this->uiRenderer->render($components));
     }
 
     private function saveRuleSet(): void
@@ -144,9 +168,16 @@ final class ilUserCleanerRulesTableGUI
     {
         $rule_set = $this->requireRuleSet();
         $this->ctrl->setParameter($this, ilUserCleanerGUIConstants::PARAM_RULE_SET_ID, $rule_set->id);
-        $content = $this->getRuleForm($rule_set->id)->getHTML();
+        $locked = $this->cronRunState->isRunning();
+        $content = $locked
+            ? $this->uiRenderer->render($this->uiFactory->messageBox()->info(
+                $this->pluginObject->txt('rule_sets_locked_running')
+            ))
+            : $this->getRuleForm($rule_set->id)->getHTML();
         $content .= $this->uiRenderer->render(
-            $this->getRulesTable($rule_set->id)->getComponent()->withRequest($this->http->request())
+            $this->getRulesTable($rule_set->id, !$locked)
+                ->getComponent()
+                ->withRequest($this->http->request())
         );
         $this->template->setContent($content);
     }
@@ -175,19 +206,24 @@ final class ilUserCleanerRulesTableGUI
     private function confirmDeleteRuleSet(): void
     {
         $rule_set = $this->requireRuleSet();
-        $confirmation = new ilConfirmationGUI();
-        $confirmation->setFormAction(
+        $modal = $this->uiFactory->modal()->interruptive(
+            $this->language->txt('delete'),
+            $this->pluginObject->txt('rule_sets_confirm_delete'),
             $this->getFormAction(ilUserCleanerGUIConstants::CMD_DELETE_RULE_SET, $rule_set->id)
-        );
-        $confirmation->setHeaderText($this->pluginObject->txt('rule_sets_confirm_delete'));
-        $confirmation->setConfirm($this->language->txt('delete'), ilUserCleanerGUIConstants::CMD_DELETE_RULE_SET);
-        $confirmation->setCancel($this->language->txt('cancel'), ilUserCleanerGUIConstants::CMD_SHOW);
-        $confirmation->addItem(
-            ilUserCleanerGUIConstants::PARAM_RULE_SET_ID,
-            (string) $rule_set->id,
-            $rule_set->title
-        );
-        $this->template->setContent($confirmation->getHTML());
+        )->withAffectedItems([
+            $this->uiFactory->modal()->interruptiveItem()->standard(
+                (string) $rule_set->id,
+                $rule_set->title
+            ),
+        ]);
+        $modal = $modal->withOnLoad($modal->getShowSignal());
+
+        $this->template->setContent($this->uiRenderer->render([
+            $modal,
+            $this->getRuleSetsTable($this->ruleSets->getAll())
+                ->getComponent()
+                ->withRequest($this->http->request()),
+        ]));
     }
 
     private function deleteRuleSet(): void
@@ -441,13 +477,34 @@ final class ilUserCleanerRulesTableGUI
         return $form;
     }
 
-    private function getRuleSetsTable(array $sets): ilUserCleanerRuleSetsKitchenSinkTable
+    private function getRuleSetsTable(array $sets, bool $locked = false): ilUserCleanerRuleSetsKitchenSinkTable
     {
         $roles = $this->getRoleOptions();
         $auth_modes = $this->getAuthOptions();
         $records = [];
         foreach ($sets as $set) {
             $memberships = $this->memberships->getByRuleSetId($set->id);
+            $actions = [
+                $this->uiFactory->link()->standard(
+                    $this->pluginObject->txt(
+                        $locked ? 'rule_sets_view_rules' : 'rule_sets_manage_rules'
+                    ),
+                    $this->getRuleSetLink($set->id, ilUserCleanerGUIConstants::CMD_MANAGE_RULE_SET_RULES)
+                ),
+            ];
+            if (!$locked) {
+                array_unshift(
+                    $actions,
+                    $this->uiFactory->link()->standard(
+                        $this->language->txt('edit'),
+                        $this->getRuleSetLink($set->id, ilUserCleanerGUIConstants::CMD_EDIT_RULE_SET)
+                    )
+                );
+                $actions[] = $this->uiFactory->link()->standard(
+                    $this->language->txt('delete'),
+                    $this->getRuleSetLink($set->id, ilUserCleanerGUIConstants::CMD_CONFIRM_DELETE_RULE_SET)
+                );
+            }
             $records[] = [
                 'rule_set_id' => $set->id,
                 'title' => $set->title,
@@ -457,20 +514,7 @@ final class ilUserCleanerRulesTableGUI
                 'condition' => $this->buildCondition($memberships),
                 'sources' => $this->buildSources($memberships),
                 'enabled' => $this->language->txt($set->enabled ? 'yes' : 'no'),
-                'actions' => $this->uiFactory->listing()->unordered([
-                    $this->uiFactory->link()->standard(
-                        $this->language->txt('edit'),
-                        $this->getRuleSetLink($set->id, ilUserCleanerGUIConstants::CMD_EDIT_RULE_SET)
-                    ),
-                    $this->uiFactory->link()->standard(
-                        $this->pluginObject->txt('rule_sets_manage_rules'),
-                        $this->getRuleSetLink($set->id, ilUserCleanerGUIConstants::CMD_MANAGE_RULE_SET_RULES)
-                    ),
-                    $this->uiFactory->link()->standard(
-                        $this->language->txt('delete'),
-                        $this->getRuleSetLink($set->id, ilUserCleanerGUIConstants::CMD_CONFIRM_DELETE_RULE_SET)
-                    ),
-                ]),
+                'actions' => $this->uiFactory->listing()->unordered($actions),
             ];
         }
         return new ilUserCleanerRuleSetsKitchenSinkTable(
@@ -490,7 +534,10 @@ final class ilUserCleanerRulesTableGUI
         );
     }
 
-    private function getRulesTable(int $rule_set_id): ilUserCleanerRuleSetRulesKitchenSinkTable
+    private function getRulesTable(
+        int $rule_set_id,
+        bool $writable = true
+    ): ilUserCleanerRuleSetRulesKitchenSinkTable
     {
         $records = [];
         foreach ($this->memberships->getByRuleSetId($rule_set_id) as $membership) {
@@ -516,7 +563,8 @@ final class ilUserCleanerRulesTableGUI
                 'rule' => $this->pluginObject->txt('rule_sets_column_rule'),
                 'source' => $this->pluginObject->txt('rule_sets_column_source'),
             ],
-            $records
+            $records,
+            $writable
         );
     }
 
@@ -726,5 +774,15 @@ final class ilUserCleanerRulesTableGUI
     private function setSavedMessage(): void
     {
         $this->template->setOnScreenMessage('success', $this->pluginObject->txt('rule_sets_saved'), true);
+    }
+
+    private function rejectRuleConfigurationChange(): never
+    {
+        $this->template->setOnScreenMessage(
+            'failure',
+            $this->pluginObject->txt('rule_sets_locked_running'),
+            true
+        );
+        $this->ctrl->redirect($this, ilUserCleanerGUIConstants::CMD_SHOW);
     }
 }

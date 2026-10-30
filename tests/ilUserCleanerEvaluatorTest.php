@@ -46,8 +46,12 @@ final class ilUserCleanerEvaluatorTest extends TestCase
             [105]
         );
 
+        $progress_checks = 0;
         $result = (new ilUserCleanerEvaluator($data, new ilUserCleanerTestLDAPLookup()))
-            ->evaluate(new DateTimeImmutable('2026-08-21 00:00:00'));
+            ->evaluate(new DateTimeImmutable('2026-08-21 00:00:00'), static function () use (&$progress_checks): void {
+                ++$progress_checks;
+            });
+        self::assertGreaterThanOrEqual(count($users), $progress_checks);
 
         self::assertSame([100 => [1], 102 => [2]], $result->matchedRuleSetIdsByUserId);
         self::assertSame(2, $result->enabledRuleSetCount);

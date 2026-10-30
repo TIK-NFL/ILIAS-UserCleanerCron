@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-final class ilUserCleanerProtocolRepository extends ilUserCleanerDatabaseRepository
+final class ilUserCleanerProtocolRepository extends ilUserCleanerDatabaseRepository implements ilUserCleanerActionProtocol
 {
     private const TABLE = 'ucc_protocol';
 
@@ -9,12 +9,22 @@ final class ilUserCleanerProtocolRepository extends ilUserCleanerDatabaseReposit
     private ilUserCleanerRuleSetRuleRepository $memberships;
     private ilUserCleanerRuleRepository $rules;
 
-    public function __construct()
+    public function __construct(?ilDBInterface $database = null)
     {
-        parent::__construct();
-        $this->ruleSets = new ilUserCleanerRuleSetRepository();
-        $this->memberships = new ilUserCleanerRuleSetRuleRepository();
-        $this->rules = new ilUserCleanerRuleRepository();
+        parent::__construct($database);
+        $this->ruleSets = new ilUserCleanerRuleSetRepository($this->database);
+        $this->memberships = new ilUserCleanerRuleSetRuleRepository($this->database);
+        $this->rules = new ilUserCleanerRuleRepository($this->database);
+    }
+
+    /** Never automatically repeat a deletion with an existing outcome or uncertain result. */
+    public function hasDeleteAttempt(int $user_id): bool
+    {
+        return $this->fetchRow(
+            'SELECT protocol_id FROM ' . self::TABLE . ' WHERE user_id = %s AND action = %s',
+            ['integer', 'text'],
+            [$user_id, 'delete']
+        ) !== null;
     }
 
     /** @param int[] $matched_rule_set_ids */
@@ -52,7 +62,7 @@ final class ilUserCleanerProtocolRepository extends ilUserCleanerDatabaseReposit
 
     public function finish(int $protocol_id, string $status, ?string $error_message = null): void
     {
-        if (!in_array($status, ['dry_run', 'success', 'unchanged', 'failed'], true)) {
+        if (!in_array($status, ['dry_run', 'deleting', 'success', 'unchanged', 'failed'], true)) {
             throw new InvalidArgumentException('Unsupported cleanup protocol status.');
         }
         $this->database->update(
@@ -122,9 +132,9 @@ final class ilUserCleanerProtocolRepository extends ilUserCleanerDatabaseReposit
     public function deleteOlderThan(DateTimeImmutable $cutoff): void
     {
         $this->database->manipulateF(
-            'DELETE FROM ' . self::TABLE . ' WHERE created_at < %s',
-            ['timestamp'],
-            [$cutoff->format('Y-m-d H:i:s')]
+            'DELETE FROM ' . self::TABLE . ' WHERE created_at < %s AND NOT (action = %s AND status <> %s)',
+            ['timestamp', 'text', 'text'],
+            [$cutoff->format('Y-m-d H:i:s'), 'delete', 'success']
         );
     }
 

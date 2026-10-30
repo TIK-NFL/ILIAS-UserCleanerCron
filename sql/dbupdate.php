@@ -144,3 +144,65 @@ foreach ([
     ]);
 }
 ?>
+
+<#3>
+<?php
+$result = $ilDB->queryF(
+    'SELECT auth_id FROM ucc_auth WHERE auth_mode = %s',
+    ['text'],
+    ['ecs']
+);
+if (!$ilDB->fetchAssoc($result)) {
+    $ilDB->insert('ucc_auth', [
+        'auth_id' => ['integer', $ilDB->nextId('ucc_auth')],
+        'auth_mode' => ['text', 'ecs'],
+    ]);
+}
+?>
+
+<#4>
+<?php
+if ($ilDB->tableExists('ucc_execution_rules')) {
+    $ilDB->dropTable('ucc_execution_rules');
+}
+if ($ilDB->sequenceExists('ucc_execution_rules')) {
+    $ilDB->dropSequence('ucc_execution_rules');
+}
+if (
+    $ilDB->tableExists('ucc_rule_set_rule')
+    && $ilDB->tableColumnExists('ucc_rule_set_rule', 'source_execution_id')
+) {
+    $ilDB->dropTableColumn('ucc_rule_set_rule', 'source_execution_id');
+}
+?>
+
+<#5>
+<?php
+if (!$ilDB->tableExists('ucc_run_lock')) {
+    $ilDB->createTable('ucc_run_lock', [
+        'lock_id' => ['type' => 'integer', 'length' => 4, 'notnull' => true],
+        'owner_token' => ['type' => 'text', 'length' => 64, 'notnull' => true],
+        'started_at' => ['type' => 'integer', 'length' => 8, 'notnull' => true],
+        'heartbeat_at' => ['type' => 'integer', 'length' => 8, 'notnull' => true],
+        'hostname' => ['type' => 'text', 'length' => 255, 'notnull' => true],
+        'process_id' => ['type' => 'integer', 'length' => 8, 'notnull' => true],
+    ]);
+    $ilDB->addPrimaryKey('ucc_run_lock', ['lock_id']);
+}
+
+$result = $ilDB->queryF(
+    'SELECT lock_id FROM ucc_run_lock WHERE lock_id = %s',
+    ['integer'],
+    [1]
+);
+if (!$ilDB->fetchAssoc($result)) {
+    $ilDB->insert('ucc_run_lock', [
+        'lock_id' => ['integer', 1],
+        'owner_token' => ['text', ''],
+        'started_at' => ['integer', 0],
+        'heartbeat_at' => ['integer', 0],
+        'hostname' => ['text', ''],
+        'process_id' => ['integer', 0],
+    ]);
+}
+?>

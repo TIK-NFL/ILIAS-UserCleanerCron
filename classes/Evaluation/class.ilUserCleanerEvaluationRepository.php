@@ -36,9 +36,14 @@ final class ilUserCleanerEvaluationRepository implements ilUserCleanerEvaluation
         $rules = [];
         foreach ($this->memberships->getByRuleSetId($rule_set->id) as $membership) {
             $rule = $this->rules->getById($membership->ruleId);
-            if ($rule !== null) {
-                $rules[] = $rule;
+            if ($rule === null) {
+                throw new RuntimeException(sprintf(
+                    'Rule set ID %d references missing rule ID %d.',
+                    $rule_set->id,
+                    $membership->ruleId
+                ));
             }
+            $rules[] = $rule;
         }
         return $rules;
     }

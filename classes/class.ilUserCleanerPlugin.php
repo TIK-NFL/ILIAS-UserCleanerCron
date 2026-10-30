@@ -21,6 +21,7 @@ declare(strict_types=1);
 class ilUserCleanerPlugin extends ilCronHookPlugin
 {
     private const DATABASE_TABLES = [
+        'ucc_run_lock',
         'ucc_rule_set_rule',
         'ucc_execution_rules',
         'ucc_rule',
@@ -65,7 +66,8 @@ class ilUserCleanerPlugin extends ilCronHookPlugin
         throw new OutOfBoundsException("Unknown cron job: " . $jobId);
     }
 
-    protected function beforeUninstall(): bool
+    #[Override]
+    public function uninstall(): bool
     {
         global $DIC;
 
@@ -89,6 +91,6 @@ class ilUserCleanerPlugin extends ilCronHookPlugin
             }
         }
 
-        return true;
+        return parent::uninstall();
     }
 }

@@ -440,6 +440,10 @@ final class ilUserCleanerDecisionTest extends TestCase
     {
         return [
             ['local', 'local', true],
+            ['ecs', 'ecs', true],
+            ['ecs', 'ldap', false],
+            ['ldap_1', 'ecs', false],
+            ['default', 'ecs', false],
             ['ldap', 'ldap', true],
             ['ldap_1', 'ldap', true],
             ['ldap_2', 'ldap', true],

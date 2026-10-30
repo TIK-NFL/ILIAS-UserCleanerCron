@@ -19,14 +19,15 @@ final class ilUserCleanerRuleSetRulesKitchenSinkTable implements DataRetrieval
         private readonly HTTPServices $http,
         private readonly string $title,
         private readonly array $labels,
-        private readonly array $records
+        private readonly array $records,
+        private readonly bool $writable = true
     ) {
     }
 
     public function getComponent(): ILIAS\UI\Component\Table\Data
     {
         $column = $this->uiFactory->table()->column();
-        return $this->uiFactory->table()->data(
+        $table = $this->uiFactory->table()->data(
             $this->title,
             [
                 'sequence' => $column->number($this->labels['sequence'])->withIsSortable(true),
@@ -34,7 +35,9 @@ final class ilUserCleanerRuleSetRulesKitchenSinkTable implements DataRetrieval
                 'source' => $column->text($this->labels['source'])->withIsSortable(true),
             ],
             $this
-        )->withActions($this->getActions());
+        );
+
+        return $this->writable ? $table->withActions($this->getActions()) : $table;
     }
 
     private function getActions(): array

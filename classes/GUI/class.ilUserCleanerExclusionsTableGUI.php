@@ -37,7 +37,6 @@ class ilUserCleanerExclusionsTableGUI
 {
     private ilCtrlInterface $ctrl;
     private ilGlobalTemplateInterface $tpl;
-    private ilToolbarGUI $toolbar;
     private ilLanguage $lng;
     private ilUserCleanerExclusionRepository $exclusions;
     private UIFactory $uiFactory;
@@ -52,7 +51,6 @@ class ilUserCleanerExclusionsTableGUI
 
         $this->ctrl = $DIC->ctrl();
         $this->tpl = $DIC->ui()->mainTemplate();
-        $this->toolbar = $DIC->toolbar();
         $this->lng = $DIC->language();
         $this->exclusions = new ilUserCleanerExclusionRepository();
         $this->uiFactory = $DIC->ui()->factory();
@@ -100,8 +98,6 @@ class ilUserCleanerExclusionsTableGUI
 
     public function show(): void
     {
-        $this->buildToolbar();
-
         $table = new ilUserCleanerExclusionsKitchenSinkTable(
             $this->exclusions,
             $this->ctrl,
@@ -118,12 +114,17 @@ class ilUserCleanerExclusionsTableGUI
             ilUserCleanerGUIConstants::CMD_HANDLE_TABLE_ACTIONS
         );
 
-        $this->tpl->setContent($this->uiRenderer->render($table->getComponent()));
+        $this->tpl->setContent(
+            $this->getAddForm()->getHTML()
+            . $this->uiRenderer->render($table->getComponent())
+        );
     }
 
-    private function buildToolbar(): void
+    private function getAddForm(): ilPropertyFormGUI
     {
-        $this->toolbar->setFormAction($this->ctrl->getFormActionByClass(
+        $form = new ilPropertyFormGUI();
+        $form->setTitle($this->pluginObject->txt('exclusion_form_title'));
+        $form->setFormAction($this->ctrl->getFormActionByClass(
             [ilObjComponentSettingsGUI::class, ilUserCleanerConfigGUI::class, self::class],
             ilUserCleanerGUIConstants::CMD_ADD_EXCLUSION
         ));
@@ -132,21 +133,16 @@ class ilUserCleanerExclusionsTableGUI
             $this->lng->txt('user'),
             ilUserCleanerGUIConstants::FIELD_USER_LOGINS
         );
-        $user_input->setMulti(true, true);
         $user_input->setDataSource($this->ctrl->getLinkTargetByClass(
             [ilObjComponentSettingsGUI::class, ilUserCleanerConfigGUI::class, self::class],
             ilUserCleanerGUIConstants::CMD_USER_AUTOCOMPLETE,
             '',
             true
         ));
-        $this->toolbar->addInputItem($user_input, true);
+        $form->addItem($user_input);
+        $form->addCommandButton(ilUserCleanerGUIConstants::CMD_ADD_EXCLUSION, $this->lng->txt('add'));
 
-        $this->toolbar->addFormButton(
-            $this->lng->txt('add'),
-            ilUserCleanerGUIConstants::CMD_ADD_EXCLUSION,
-            null,
-            true
-        );
+        return $form;
     }
 
     private function addExclusion(): void

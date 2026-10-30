@@ -14,7 +14,7 @@ settings_cleanup_action_delete#:#Benutzerkonto mit der ILIAS-Standardbereinigung
 settings_cleanup_action_delete_info#:#Löscht das Benutzerkonto. ILIAS entfernt dabei zugehörige persönliche Daten, Postfachdaten, Arbeitsraum und Portfolios. Repository-Objekte bleiben erhalten und ihr Besitzer wird zurückgesetzt.
 settings_protocol_retention_value#:#Protokoll-Aufbewahrung
 settings_protocol_retention_unit#:#Aufbewahrungseinheit
-settings_protocol_retention_info#:#Optional. Ältere Protokolleinträge und gespeicherte CSV-Exporte werden beim Cronlauf entfernt. Leer lassen, um sie unbegrenzt aufzubewahren.
+settings_protocol_retention_info#:#Optional. Ältere Protokolleinträge und gespeicherte CSV-Exporte werden beim Cronlauf entfernt. Leer lassen, um sie unbegrenzt aufzubewahren. Ungeklärte und fehlgeschlagene Löschvorgänge bleiben zur Prüfung erhalten.
 settings_retention_days#:#Tage
 settings_retention_months#:#Monate
 protocol_title#:#Bereinigungsprotokoll
@@ -28,6 +28,7 @@ protocol_column_time#:#Zeitpunkt
 protocol_column_matriculation#:#Matrikelnummer
 protocol_column_name#:#Name
 protocol_column_login#:#Login
+protocol_column_external_account#:#Externes Konto
 protocol_column_email#:#E-Mail
 protocol_column_action#:#Aktion
 protocol_column_rule_sets#:#Regelsätze
@@ -45,6 +46,8 @@ rule_sets_create_title#:#Regelsatz erstellen
 rule_sets_add#:#Regelsatz hinzufügen
 rule_sets_edit_title#:#Regelsatz bearbeiten
 rule_sets_manage_rules#:#Regeln verwalten
+rule_sets_view_rules#:#Regeln anzeigen
+rule_sets_locked_running#:#Die Regelkonfiguration ist schreibgeschützt, da der User-Cleaner-Cronjob derzeit ausgeführt wird. Warten Sie, bis der Lauf beendet ist, oder setzen Sie einen veralteten Lauf in der ILIAS-Cronjob-Verwaltung zurück.
 rule_sets_saved#:#Änderungen gespeichert.
 rule_sets_deleted#:#Regelsatz gelöscht.
 rule_sets_confirm_delete#:#Möchten Sie diesen Regelsatz und alle enthaltenen Regeln wirklich löschen?
@@ -77,6 +80,7 @@ rule_sets_ldap_source_required#:#Bitte eine bestehende ILIAS-LDAP-Konfiguration 
 
 // exclusion table
 exclusion_table_title#:#Nie löschen
+exclusion_form_title#:#Benutzer zu „Nie löschen“ hinzufügen
 exclusion_table_column_user_id#:#Benutzer-ID
 exclusion_table_column_login#:#Anmeldename
 exclusion_table_column_name#:#Name
@@ -113,3 +117,14 @@ auth_ldap_existing_sources_info#:#LDAP-Zugangsdaten und Verbindungsdetails werde
 auth_ldap_no_existing_sources#:#Es sind keine ILIAS-LDAP-Konfigurationen verfügbar.
 auth_rest_section_title#:#REST-Prüfung
 auth_rest_not_implemented#:#Nicht implementiert. REST-Regeln können derzeit weder erstellt noch ausgewertet werden; bestehende REST-Regeln werden sicher übersprungen.
+
+auth_mode_ecs#:#ECS (CampusConnect)
+
+protocol_column_status#:#Ergebnis
+protocol_column_error#:#Fehlerdetails
+protocol_status_pending#:#Gestartet; Ergebnis noch nicht bestätigt
+protocol_status_deleting#:#Konto deaktiviert; Löschergebnis noch nicht bestätigt
+protocol_status_success#:#Abgeschlossen
+protocol_status_failed#:#Fehlgeschlagen; Änderungen können teilweise erfolgt sein
+protocol_status_unchanged#:#Unverändert
+protocol_status_dry_run#:#Testlauf

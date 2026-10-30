@@ -17,7 +17,12 @@ require_once $autoload;
 defined('ANONYMOUS_USER_ID') || define('ANONYMOUS_USER_ID', 13);
 defined('SYSTEM_USER_ID') || define('SYSTEM_USER_ID', 6);
 
+require_once __DIR__ . '/../classes/Repository/class.ilUserCleanerDatabaseRepository.php';
+require_once __DIR__ . '/../classes/Lock/interface.ilUserCleanerRunLock.php';
+require_once __DIR__ . '/../classes/Lock/class.ilUserCleanerRunLockRepository.php';
+require_once __DIR__ . '/../classes/class.ilUserCleanerJob.php';
 require_once __DIR__ . '/../classes/Evaluation/class.ilUserCleanerDecision.php';
+require_once __DIR__ . '/../classes/GUI/class.ilUserCleanerRulesTableGUI.php';
 require_once __DIR__ . '/../classes/Settings/enum.ilUserCleanerRetentionUnit.php';
 require_once __DIR__ . '/../classes/Settings/class.ilUserCleanerRetention.php';
 require_once __DIR__ . '/../classes/GUI/class.ilUserCleanerGUIConstants.php';
@@ -29,3 +34,5 @@ require_once __DIR__ . '/../classes/Evaluation/class.ilUserCleanerEvaluationResu
 require_once __DIR__ . '/../classes/Evaluation/interface.ilUserCleanerEvaluationData.php';
 require_once __DIR__ . '/../classes/LDAP/interface.ilUserCleanerLDAPAccountLookup.php';
 require_once __DIR__ . '/../classes/Evaluation/class.ilUserCleanerEvaluator.php';
+
+defined('SYSTEM_ROLE_ID') || define('SYSTEM_ROLE_ID', 2);

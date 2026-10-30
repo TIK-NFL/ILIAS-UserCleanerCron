@@ -44,10 +44,14 @@ class ilUserCleanerConfigGUI extends ilPluginConfigGUI
         $this->preserveComponentParameters();
 
         $next_class = $ctrl->getNextClass($this);
+        if (!in_array($next_class, self::SUBTABS, true)) {
+            $next_class = self::SUBTABS[0];
+        }
         $this->setTabs($next_class);
 
         switch ($next_class) {
             case strtolower(ilUserCleanerSettingsGUI::class):
+            default:
                 $settings_gui = new ilUserCleanerSettingsGUI();
                 $settings_gui->setPluginObject($this->plugin_object);
                 $ctrl->forwardCommand($settings_gui);
@@ -71,7 +75,6 @@ class ilUserCleanerConfigGUI extends ilPluginConfigGUI
                 $ctrl->forwardCommand($protocol_gui);
                 break;
 
-            default:
             case strtolower(ilUserCleanerExclusionsTableGUI::class):
                 $exclusions_gui = new ilUserCleanerExclusionsTableGUI();
                 $exclusions_gui->setPluginObject($this->plugin_object);
@@ -119,6 +122,6 @@ class ilUserCleanerConfigGUI extends ilPluginConfigGUI
 
         $tabs->activateSubTab(in_array($next_class, self::SUBTABS, true)
             ? $next_class
-            : strtolower(ilUserCleanerExclusionsTableGUI::class));
+            : strtolower(ilUserCleanerSettingsGUI::class));
     }
 }

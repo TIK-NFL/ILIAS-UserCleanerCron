@@ -21,9 +21,15 @@ declare(strict_types=1);
 use ILIAS\Cron\Schedule\CronJobScheduleType;
 
 require_once __DIR__ . '/Export/class.ilUserCleanerProtocolExportRepository.php';
+require_once __DIR__ . '/Lock/interface.ilUserCleanerRunLock.php';
+require_once __DIR__ . '/Lock/class.ilUserCleanerRunLockRepository.php';
 
 class ilUserCleanerJob extends ilCronJob
 {
+    public function __construct(private readonly ?ilUserCleanerRunLock $runLock = null)
+    {
+    }
+
     public function getId(): string
     {
         return "ucc";
@@ -76,9 +82,40 @@ class ilUserCleanerJob extends ilCronJob
         $result = new ilCronJobResult();
         $logger = $DIC->logger()->user();
         $started_at = microtime(true);
-        $logger->info('UserCleaner cron run started.');
+        $lock = $this->runLock ?? new ilUserCleanerRunLockRepository();
+        $owner_token = null;
+        $lock_acquired = false;
 
         try {
+            $owner_token = bin2hex(random_bytes(32));
+            $hostname = gethostname();
+            $process_id = getmypid();
+            $lock_acquired = $lock->acquire(
+                $owner_token,
+                time(),
+                is_string($hostname) ? $hostname : '',
+                is_int($process_id) ? $process_id : 0
+            );
+            if (!$lock_acquired) {
+                $message = 'UserCleaner did not start because another run owns the execution lock.';
+                $result->setStatus(ilCronJobResult::STATUS_FAIL);
+                $result->setMessage($message);
+                $logger->warning($message);
+                return $result;
+            }
+
+            $logger->info(sprintf(
+                'UserCleaner cron run started with execution lock %s.',
+                $owner_token
+            ));
+            $heartbeat = Closure::fromCallable(new ilUserCleanerHeartbeat(
+                function () use ($DIC, $lock, $owner_token): void {
+                    $lock->heartbeat($owner_token, time());
+                    $DIC->cron()->manager()->ping($this->getId());
+                },
+                static fn(): float => hrtime(true) / 1_000_000_000
+            ));
+            $heartbeat();
             $settings = new ilUserCleanerSettingsRepository();
             $retention = $settings->getProtocolRetention();
             if ($retention !== null) {
@@ -94,24 +131,25 @@ class ilUserCleanerJob extends ilCronJob
                     $cutoff->format(DateTimeInterface::ATOM)
                 ));
             }
-            $evaluation = (new ilUserCleanerEvaluator())->evaluate();
+            $evaluation = (new ilUserCleanerEvaluator())->evaluate(null, $heartbeat);
             $action_result = null;
             if ($settings->isDryRun()) {
-                $this->recordDryRunCandidates($evaluation);
+                $this->recordDryRunCandidates($evaluation, $heartbeat);
                 $message = sprintf(
                     'Dry run: %d user(s) matched %d enabled rule set(s). No accounts were changed.',
                     $evaluation->getMatchedUserCount(),
                     $evaluation->enabledRuleSetCount
                 );
-                $this->logDryRunDiagnostics($evaluation);
+                $this->logDryRunDiagnostics($evaluation, $heartbeat);
             } else {
                 $action = $settings->getCleanupAction();
                 $action_result = (new ilUserCleanerActionExecutor())->execute(
                     $evaluation->matchedRuleSetIdsByUserId,
-                    $action
+                    $action,
+                    $heartbeat
                 );
                 $message = sprintf(
-                    'Action "%s": %d user(s) matched; %d changed, %d unchanged, %d failed.',
+                    'Action "%s": %d user(s) matched; %d changed, %d unchanged, %d errors or actions requiring review.',
                     $action->value,
                     $evaluation->getMatchedUserCount(),
                     $action_result->changed,
@@ -146,15 +184,33 @@ class ilUserCleanerJob extends ilCronJob
                 $e->getMessage()
             ));
             $logger->debug($e->getTraceAsString());
+        } finally {
+            if ($lock_acquired && $owner_token !== null) {
+                try {
+                    if (!$lock->release($owner_token)) {
+                        throw new RuntimeException('The execution lock was no longer owned by this run.');
+                    }
+                    $logger->info('UserCleaner execution lock released.');
+                } catch (Throwable $e) {
+                    $result->setStatus(ilCronJobResult::STATUS_FAIL);
+                    $result->setMessage('UserCleaner finished, but its execution lock could not be released. Manual review is required.');
+                    $logger->error(sprintf(
+                        'UserCleaner could not release execution lock %s: %s',
+                        $owner_token,
+                        $e->getMessage()
+                    ));
+                }
+            }
         }
 
         return $result;
     }
 
-    private function recordDryRunCandidates(ilUserCleanerEvaluationResult $evaluation): void
+    private function recordDryRunCandidates(ilUserCleanerEvaluationResult $evaluation, Closure $heartbeat): void
     {
         $protocol = new ilUserCleanerProtocolRepository();
         foreach ($evaluation->matchedRuleSetIdsByUserId as $user_id => $rule_set_ids) {
+            $heartbeat();
             $user = ilObjectFactory::getInstanceByObjId($user_id, false);
             if (!$user instanceof ilObjUser) {
                 throw new RuntimeException(sprintf('Could not load dry-run candidate user ID %d.', $user_id));
@@ -164,10 +220,11 @@ class ilUserCleanerJob extends ilCronJob
         }
     }
 
-    private function logDryRunDiagnostics(ilUserCleanerEvaluationResult $evaluation): void
+    private function logDryRunDiagnostics(ilUserCleanerEvaluationResult $evaluation, Closure $heartbeat): void
     {
         global $DIC;
         foreach ($evaluation->ruleDiagnosticsByUserId as $user_id => $sets) {
+            $heartbeat();
             foreach ($sets as $rule_set_id => $rules) {
                 $DIC->logger()->user()->debug(sprintf(
                     'UserCleaner dry-run user ID %d, rule set ID %d: %s',

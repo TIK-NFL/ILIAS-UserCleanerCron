@@ -18,8 +18,6 @@ final class ilUserCleanerGUIConstants
     public const CMD_ADD_EXCLUSION = 'addExclusion';
     public const CMD_USER_AUTOCOMPLETE = 'doUserAutoComplete';
     public const CMD_HANDLE_TABLE_ACTIONS = 'handleTableActions';
-    public const CMD_APPLY_PROTOCOL_FILTER = 'applyProtocolFilter';
-    public const CMD_RESET_PROTOCOL_FILTER = 'resetProtocolFilter';
     public const CMD_EXPORT_PROTOCOL = 'exportProtocol';
 
     public const TABLE_ACTION_DELETE = 'delete';

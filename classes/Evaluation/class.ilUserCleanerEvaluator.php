@@ -24,7 +24,7 @@ final class ilUserCleanerEvaluator
         $this->logger = $logger;
     }
 
-    public function evaluate(?DateTimeImmutable $now = null): ilUserCleanerEvaluationResult
+    public function evaluate(?DateTimeImmutable $now = null, ?Closure $heartbeat = null): ilUserCleanerEvaluationResult
     {
         $now ??= new DateTimeImmutable();
         $matches = [];
@@ -33,6 +33,7 @@ final class ilUserCleanerEvaluator
         $diagnostics = [];
 
         foreach ($this->data->getRuleSets() as $rule_set) {
+            $heartbeat?->__invoke();
             if (!$rule_set->enabled) {
                 continue;
             }
@@ -69,6 +70,7 @@ final class ilUserCleanerEvaluator
 
             $rule_set_matches = [];
             foreach ($this->data->getAssignedUserIds($rule_set->roleId) as $user_id) {
+                $heartbeat?->__invoke();
                 if (ilUserCleanerDecision::isProtected(
                     $user_id,
                     $this->data->getActorId(),
@@ -105,7 +107,7 @@ final class ilUserCleanerEvaluator
                     ));
                     continue;
                 }
-                $rule_results = $this->evaluateRules($user, $rules, $now);
+                $rule_results = $this->evaluateRules($user, $rules, $now, $heartbeat);
                 $diagnostics[$user_id][$rule_set->id] = $rule_results;
                 if (ilUserCleanerDecision::matchesRuleSet(array_values($rule_results))) {
                     $rule_set_matches[] = $user_id;
@@ -176,10 +178,11 @@ final class ilUserCleanerEvaluator
     }
 
     /** @param ilUserCleanerRule[] $rules */
-    private function evaluateRules(ilUserCleanerEvaluationUser $user, array $rules, DateTimeImmutable $now): array
+    private function evaluateRules(ilUserCleanerEvaluationUser $user, array $rules, DateTimeImmutable $now, ?Closure $heartbeat): array
     {
         $results = [];
         foreach ($rules as $rule) {
+            $heartbeat?->__invoke();
             $results[$rule->id] = $this->matches($user, $rule, $now);
         }
         return $results;
