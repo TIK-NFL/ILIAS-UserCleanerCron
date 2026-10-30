@@ -547,3 +547,134 @@ Stop rollout and investigate when any of the following occurs:
 
 Treat these limits as part of the production risk assessment. They do not
 replace clone testing or backup verification.
+
+## Installation and developer reference
+
+### Compatibility and installation
+
+- ILIAS versions: `10.00` to `10.999`.
+- PHP: the version required by the target ILIAS installation.
+- PHP LDAP extension: optional for LDAP connection tests; required for LDAP functionality where applicable.
+
+Install the plugin in the ILIAS CronHook plugin slot:
+
+```text
+ILIAS/public/Customizing/global/plugins/Services/Cron/CronHook/UserCleaner/
+```
+
+In ILIAS administration, open `Administration > Plugins`, update the plugin
+slot if required, then install and activate **UserCleaner**. Open the plugin
+configuration to set up rules, assignments, interfaces, and exclusions.
+Installation or activation does **not** authorize activation of the cron job.
+
+### Configuration interface details
+
+- **Rule sets**: Create sets using the page-toolbar modal. Open an existing set
+  from the overview; **Edit** updates metadata, while **Manage rules** shows
+  the add-rule form and current `AND` rules. The add-rule form shows comparison
+  fields for time rules and source configuration for LDAP rules.
+- **Never delete**: Add users by login using the ILIAS user autocomplete.
+- **Interfaces**: Native ILIAS LDAP configurations can include both direct LDAP
+  authentication servers and authentication data sources.
+- **Protocol**: Search and filter by identity, rules, action, and dates before
+  exporting a UTF-8 CSV through ILIAS Resource Storage (IRSS).
+
+Database migration metadata initially included `last_login_months`,
+`last_login_days`, `external_account_missing_ldap`, and the reserved,
+nonfunctional `external_account_missing_rest` parameter. The current rule
+reference above also documents additional available rule types. Rules record
+whether their data comes from ILIAS or LDAP; applicable LDAP rules require a
+specific native LDAP configuration. Only global roles may be targets.
+
+If a rule set references a rule that is missing during evaluation, the entire
+run fails before any cleanup actions begin; an incomplete `AND` set is never
+partially evaluated.
+
+### LDAP implementation details
+
+UserCleaner uses a short-lived LDAP connection rather than interpreting an
+unsuccessful ILIAS LDAP wrapper search as an empty result. The configured
+server is the endpoint selected by ILIAS (`ilLDAPServer::getUrl()`). The plugin
+never iterates fallback URLs itself. ILIAS may update its selected endpoint,
+which UserCleaner reads on a later run.
+
+The ILIAS five-second network timeout and a 30-second limit for individual
+searches are applied. Search filters escape external-account values. A failed
+cached connection is discarded so that a later lookup or run can reconnect.
+Only a successful zero-entry result is evidence of absence. A successful
+lookup against a *wrong* but reachable directory is still dangerous; validate
+the destination and search scope independently.
+
+REST rule metadata is retained for forward compatibility. The reserved REST
+rule is visible but disabled in the UI; existing unsupported rule sets are
+skipped and reported.
+
+### Cron job registration and heartbeat
+
+- Plugin ID and cron job ID: `ucc`.
+- Cron job title: **User Cleaner**.
+- Suggested/default schedule: hourly; automatic activation disabled.
+- Flexible scheduling and custom settings are supported.
+
+The cron calls the ILIAS cron manager's `ping('ucc')` at progress points,
+throttled to once per minute using a monotonic clock. This refreshes the
+ILIAS `alive_ts` state, but does not extend PHP time limits or execute while
+one database, LDAP, or deletion call is blocked. The rule-set editing guard
+also uses ILIAS `running_ts` and `alive_ts`; previously opened forms and
+direct writes are rejected during a reported run. Settings and **Never delete**
+remain available as safety controls.
+
+For deletion, protocol status transitions happen per user rather than as a
+batch flush. A failure to record `success` retains the preceding status and
+is logged, rather than incorrectly marking deletion as failed. A hard
+interruption may leave `pending` or `deleting` records requiring review;
+automatic recovery, reactivation, and retry are not implemented. Disabling an
+account does not cancel requests already executing. Separate dry runs create
+separate observations.
+
+### Database tables
+
+The schema and migrations are defined in `sql/dbupdate.php`.
+
+| Table | Purpose |
+| --- | --- |
+| `ucc_config` | Plugin settings (key/value) |
+| `ucc_parameter` | Available cleanup parameters |
+| `ucc_rule` | Cleanup rules |
+| `ucc_auth` | Authentication modes |
+| `ucc_rule_set` | Named sets with a global role and authentication method |
+| `ucc_rule_set_rule` | Ordered rule memberships within sets |
+| `ucc_exclusion` | Protected user exclusions |
+| `ucc_protocol` | Identity snapshots, match details, and action outcomes |
+| `ucc_protocol_export` | IRSS references for exported CSV files |
+| `ucc_run_lock` | Singleton atomic execution lock |
+
+Migration `0.26.4` removes the unused `ucc_execution_rules` table and its
+legacy `source_execution_id` membership column. Current set membership is
+stored in `ucc_rule_set` and `ucc_rule_set_rule`.
+
+### Source tree and tests
+
+| Path | Role |
+| --- | --- |
+| `plugin.php` | Plugin metadata |
+| `classes/class.ilUserCleanerPlugin.php` | Bootstrap and cron registration |
+| `classes/class.ilUserCleanerJob.php` | Cron implementation |
+| `classes/class.ilUserCleanerConfigGUI.php` | Configuration routing and subtabs |
+| `classes/GUI/` | Configuration screens and tables |
+| `classes/Repository/` | Shared database repository support |
+| `classes/Rule/` | Typed rule-set repositories and domain models |
+| `classes/Settings/` | Settings and exclusion repositories |
+| `sql/dbupdate.php` | Database schema and migrations |
+| `lang/` | German and English translations |
+
+Run the PHPUnit suite from the ILIAS installation:
+
+```bash
+vendor/composer/vendor/bin/phpunit -c public/Customizing/global/plugins/Services/Cron/CronHook/UserCleaner/phpunit.xml
+```
+
+### License
+
+UserCleaner follows the ILIAS GPL-3.0 licensing model. See the ILIAS license
+information and the [GPLv3 license](https://www.gnu.org/licenses/gpl-3.0.en.html).
