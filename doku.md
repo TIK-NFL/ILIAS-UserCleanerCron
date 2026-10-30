@@ -6,6 +6,14 @@
 > UserCleaner can permanently delete ILIAS accounts and the personal data that
 > ILIAS associates with them. A technically valid but incorrect rule can select
 > an entire role. The plugin has no undo function for deletion.
+>
+> DISCLAIMER – USE AT YOUR OWN RISK
+>
+> This software is provided "AS IS", without warranty of any kind, to the extent permitted by applicable law.
+>
+> The authors, contributors, and maintainers accept no responsibility or liability for data loss, accidental account deletion, system damage, service interruptions, or any other consequences resulting from the installation, configuration, or use of this plugin, to the extent permitted by applicable law.
+>
+> You are solely responsible for testing, configuring, and operating this plugin, verifying backups, and ensuring compliance with applicable laws and organizational policies.
 
 Do not install the plugin in production, disable dry run, or activate its cron
 job until all steps in this guide have been completed on a development system
